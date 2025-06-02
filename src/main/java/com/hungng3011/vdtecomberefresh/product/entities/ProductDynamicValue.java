@@ -1,12 +1,17 @@
 package com.hungng3011.vdtecomberefresh.product.entities;
 
+import com.hungng3011.vdtecomberefresh.category.entities.CategoryDynamicField;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "product_dynamic_values")
+@Table(name = "product_dynamic_values", indexes = {
+        @Index(name = "idx_product_dynamic_value_product_id", columnList = "product_id"),
+        @Index(name = "idx_product_dynamic_value_field_id", columnList = "field_id"),
+        @Index(name = "idx_product_dynamic_value_value", columnList = "value")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

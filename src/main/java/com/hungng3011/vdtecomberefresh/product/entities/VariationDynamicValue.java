@@ -1,5 +1,6 @@
 package com.hungng3011.vdtecomberefresh.product.entities;
 
+import com.hungng3011.vdtecomberefresh.category.entities.CategoryDynamicField;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

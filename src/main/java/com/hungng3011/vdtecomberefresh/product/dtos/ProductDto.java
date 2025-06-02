@@ -1,5 +1,6 @@
 package com.hungng3011.vdtecomberefresh.product.dtos;
 
+import com.hungng3011.vdtecomberefresh.category.dtos.CategoryDto;
 import lombok.*;
 import java.math.BigDecimal;
 import java.util.List;
@@ -13,6 +14,7 @@ public class ProductDto {
     private String description;
     private BigDecimal basePrice;
     private List<String> images;
+    private CategoryDto category;
     private Long categoryId;
     private List<ProductDynamicValueDto> dynamicValues;
     private List<VariationDto> variations;

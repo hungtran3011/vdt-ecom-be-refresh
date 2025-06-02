@@ -7,6 +7,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
 public class VariationDto {
     private Long id;
     private Long productId;

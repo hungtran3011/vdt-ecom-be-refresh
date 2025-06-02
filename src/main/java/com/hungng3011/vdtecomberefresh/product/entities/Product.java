@@ -1,9 +1,12 @@
 package com.hungng3011.vdtecomberefresh.product.entities;
 
+import com.hungng3011.vdtecomberefresh.category.entities.Category;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,7 +30,10 @@ import java.util.List;
  * \@see Variation
  */
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+        @Index(name = "idx_product_category_id", columnList = "category_id"),
+        @Index(name = "idx_product_name", columnList = "name")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -48,8 +54,9 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal basePrice;
 
-    @ElementCollection
     @Column(columnDefinition = "jsonb")
+    @Type(JsonBinaryType.class)
+
     private List<String> images; // List of image URLs
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)

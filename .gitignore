@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+/.env
+/src/main/resources/media.properties
+/src/main/resouces/security.properties
+/src/main/resources/db.properties
+/src/main/resources/security.properties
