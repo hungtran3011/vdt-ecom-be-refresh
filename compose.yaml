@@ -18,23 +18,88 @@ services:
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_SMTP_HOST: ${KC_SMTP_HOST:-mail.example.test}
+      KC_SMTP_PORT: ${KC_SMTP_PORT:-587}
+      KC_SMTP_FROM: ${KC_SMTP_FROM:-noreply@example.test}
+      KC_SMTP_USERNAME: ${KC_SMTP_USERNAME:-noreply@example.test}
+      KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD:-noreplypass}
+      KC_SMTP_SSL: ${KC_SMTP_SSL:-false}
+      KC_SMTP_STARTTLS: ${KC_SMTP_STARTTLS:-false}
     ports:
       - '8080:8080'
     depends_on:
       - postgres
     command: start-dev --http-enabled=true
 
+  mail-init:
+    image: busybox
+    volumes:
+      - mailconfig:/config
+    environment:
+      - MAIL_ACCOUNTS=${MAIL_ACCOUNTS:-test@example.test|{PLAIN}testpass,noreply@example.test|{PLAIN}noreplypass}
+      - MAIL_ALIASES=${MAIL_ALIASES:-alias1@example.test test@example.test}
+    command: |
+      sh -c "
+        echo 'Creating mail configuration...'
+        
+        # Clear existing config
+        rm -f /config/postfix-accounts.cf /config/postfix-virtual.cf
+        
+        # Create accounts from environment variable
+        if [ ! -z \"$$MAIL_ACCOUNTS\" ]; then
+          echo \"$$MAIL_ACCOUNTS\" | tr ',' '\n' > /config/postfix-accounts.cf
+          echo 'Created accounts:'
+          cat /config/postfix-accounts.cf
+        fi
+        
+        # Create aliases from environment variable
+        if [ ! -z \"$$MAIL_ALIASES\" ]; then
+          echo \"$$MAIL_ALIASES\" | tr ',' '\n' > /config/postfix-virtual.cf
+          echo 'Created aliases:'
+          cat /config/postfix-virtual.cf
+        fi
+        
+        echo 'Mail configuration complete'
+      "
+
   mailserver:
-    image: 'mailserver/docker-mailserver:latest'
-    hostname: mail.local
-    domainname: local
-    env_file:
-      - .env
+    image: 'ghcr.io/docker-mailserver/docker-mailserver:latest'
+    container_name: mailserver
+    hostname: mail.example.test
+    domainname: example.test
     ports:
-      - '25:25'
-      - '143:143'
-      - '587:587'
-      - '993:993'
+      - '25:25'      # SMTP
+      - '143:143'    # IMAP
+      - '587:587'    # Submission
+      - '465:465'    # Secure SMTP
+      - '993:993'    # Secure IMAP
+    volumes:
+      - maildata:/var/mail
+      - mailstate:/var/mail-state
+      - mailconfig:/tmp/docker-mailserver
+    environment:
+      - ENABLE_SPAMASSASSIN=0
+      - ENABLE_CLAMAV=0
+      - ENABLE_FAIL2BAN=0
+      - ENABLE_POSTGREY=0
+      - SSL_TYPE=
+      - PERMIT_DOCKER=network
+      - OVERRIDE_HOSTNAME=mail.example.test
+      - POSTMASTER_ADDRESS=postmaster@example.test
+      - POSTFIX_MESSAGE_SIZE_LIMIT=10240000
+      - ONE_DIR=1
+      - ENABLE_AMAVIS=0
+      - DMS_DEBUG=1
+    depends_on:
+      - mail-init
+    healthcheck:
+      test: [ "CMD", "ss", "-lntp", "|", "grep", ":25" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    cap_add:
+      - NET_ADMIN
+      - SYS_PTRACE
 
   app:
     build:
@@ -48,6 +113,9 @@ services:
       - postgres
       - redis
       - keycloak
-#    volumes:
-#      - .:/app
-#    command: python manage.py runserver
+      - mailserver
+
+volumes:
+  maildata:
+  mailstate:
+  mailconfig:

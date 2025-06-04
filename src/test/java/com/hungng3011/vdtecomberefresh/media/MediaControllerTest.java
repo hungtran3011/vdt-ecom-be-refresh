@@ -3,11 +3,17 @@ package com.hungng3011.vdtecomberefresh.media;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.hungng3011.vdtecomberefresh.config.SecurityConfig;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,13 +24,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MediaController.class)
+@AutoConfigureMockMvc(addFilters = false) // Disable security filters for testing
+@Import(SecurityConfig.class)
+@ActiveProfiles("test")
 public class MediaControllerTest {
+
+    @BeforeEach
+    void initMocks() {
+        org.mockito.MockitoAnnotations.openMocks(this);
+    }
+
+    @Mock
+    private MediaService mediaService;
+
+    @InjectMocks
+    private MediaController mediaController;
 
     @Autowired
     private MockMvc mockMvc;
-
-    @MockBean
-    private MediaService mediaService;
 
     private Map<String, Object> uploadResult;
     private Map<String, Object> deleteResult;

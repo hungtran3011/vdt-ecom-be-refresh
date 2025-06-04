@@ -10,5 +10,6 @@ public class CategoryDto {
     private Long id;
     private String name;
     private List<CategoryDynamicFieldDto> dynamicFields;
+    private String imageUrl;
 }
 

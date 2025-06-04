@@ -1,8 +1,10 @@
 spring:
+  profiles:
+    active: test
   application:
     name: ecom
   config:
-    import: file:src/main/resources/db.properties, file:src/main/resources/media.properties, optional:file:src/main/resources/security.properties
+    import: file:src/main/resources/db.yml, file:src/main/resources/media.properties, optional:file:src/main/resources/security.yml
   datasource:
     driver-class-name: org.postgresql.Driver
   jpa:

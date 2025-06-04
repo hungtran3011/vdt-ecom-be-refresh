@@ -33,6 +33,14 @@ build/
 .vscode/
 /.env
 /src/main/resources/media.properties
-/src/main/resouces/security.properties
-/src/main/resources/db.properties
 /src/main/resources/security.properties
+/src/main/resources/db.yml
+/src/main/resources/security.yml
+/src/main/resources/mail.yml
+/docker-data/
+/mail-config/
+/mail-data/
+/mail-state/
+"Test Results - vdtecomberefresh_in_vdt-ecom-be-refresh.html"
+src/main/resources/static/product.html
+Test Results - vdtecomberefresh_in_vdt-ecom-be-refresh.html
