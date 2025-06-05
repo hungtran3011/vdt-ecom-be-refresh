@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +45,7 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         String orderId = UUID.randomUUID().toString();
-        String currentTime = Instant.now().toString();
+        LocalDateTime currentTime = LocalDateTime.now();
 
         orderItem = new OrderItem();
         orderItem.setId(1L);
@@ -59,16 +59,16 @@ class OrderServiceTest {
         order = new Order();
         order.setId(orderId);
         order.setUserId("user123");
-        order.setCreatedAt(currentTime);
-        order.setUpdatedAt(currentTime);
+        order.setCreatedAt(currentTime); // Order entity expects String
+        order.setUpdatedAt(currentTime); // Order entity expects String
         order.setItems(Collections.singletonList(orderItem));
 
 
         orderDto = new OrderDto();
         orderDto.setId(orderId);
         orderDto.setUserId("user123");
-        orderDto.setCreatedAt(currentTime);
-        orderDto.setUpdatedAt(currentTime);
+        orderDto.setCreatedAt(currentTime); // OrderDto expects LocalDateTime
+        orderDto.setUpdatedAt(currentTime); // OrderDto expects LocalDateTime
         orderDto.setItems(Collections.singletonList(orderItemDto));
     }
 
@@ -204,7 +204,7 @@ class OrderServiceTest {
             OrderDto finalDto = new OrderDto();
             finalDto.setId(saved.getId());
             finalDto.setAddress(saved.getAddress());
-            finalDto.setUpdatedAt(saved.getUpdatedAt());
+            finalDto.setUpdatedAt(LocalDateTime.now()); // Convert String to LocalDateTime
             if (saved.getItems() != null && !saved.getItems().isEmpty()) {
                  OrderItemDto itemDto = new OrderItemDto();
                  itemDto.setQuantity(saved.getItems().get(0).getQuantity());

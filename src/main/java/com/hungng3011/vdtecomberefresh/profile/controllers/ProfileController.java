@@ -30,11 +30,11 @@ public class ProfileController {
 
     @PostMapping("/me/sync")
     public ResponseEntity<Void> syncMyProfile(@AuthenticationPrincipal Jwt jwt) {
-        if (jwt == null) {
-            // This case should ideally be handled by Spring Security if endpoint is secured
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        try{
+            profileService.syncProfileFromToken(jwt);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        profileService.syncProfileFromToken(jwt);
-        return ResponseEntity.ok().build();
     }
 }

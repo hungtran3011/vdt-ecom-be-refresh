@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .payment-summary {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .payment-details {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .payment-details th,
+        .payment-details td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .payment-details th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .btn-retry {
+            background: #28a745;
+        }
+        .error-icon {
+            font-size: 48px;
+            color: #dc3545;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .troubleshooting {
+            background: #e2e3e5;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>❌ Payment Failed</h1>
+            <p>We couldn't process your payment</p>
+        </div>
+        
+        <div class="content">
+            <div class="error-icon">⚠️</div>
+            
+            <h2>Payment Processing Issue</h2>
+            
+            <p>We're sorry, but we encountered an issue while processing your payment for order <strong th:text="${orderId}">ORDER123</strong>.</p>
+            
+            <div class="payment-summary">
+                <h3>Payment Information</h3>
+                <table class="payment-details">
+                    <tr>
+                        <th>Order ID</th>
+                        <td th:text="${orderId}">ORDER123</td>
+                    </tr>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <td th:text="${transactionId}">TXN123456</td>
+                    </tr>
+                    <tr>
+                        <th>Attempted Date</th>
+                        <td th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}">Jan 01, 2024 10:00</td>
+                    </tr>
+                    <tr>
+                        <th>Payment Method</th>
+                        <td>Viettel Money</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td><span style="color: #dc3545; font-weight: bold;">Failed</span></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="error-message" th:if="${errorMessage}">
+                <h4>Error Details:</h4>
+                <p th:text="${errorMessage}">Payment processing failed with error code: 01</p>
+            </div>
+            
+            <div class="troubleshooting">
+                <h3>What you can do:</h3>
+                <ul>
+                    <li><strong>Try again:</strong> The issue might be temporary. Please try processing your payment again.</li>
+                    <li><strong>Check your account:</strong> Ensure you have sufficient funds in your Viettel Money account.</li>
+                    <li><strong>Verify details:</strong> Double-check that all payment information is correct.</li>
+                    <li><strong>Contact support:</strong> If the problem persists, please contact our customer service team.</li>
+                </ul>
+            </div>
+            
+            <p><strong>Your order is still reserved</strong> and will be held for 24 hours while you resolve the payment issue.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="btn btn-retry">Try Payment Again</a>
+                <a href="#" class="btn">Contact Support</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>We apologize for the inconvenience.</p>
+            <p>If you continue to experience issues, please contact our customer service team for assistance.</p>
+            <p>© 2024 VDT E-Commerce. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

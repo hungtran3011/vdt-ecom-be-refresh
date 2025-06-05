@@ -12,7 +12,7 @@ import java.util.List;
 public interface OrderItemMapper {
 
     @Mapping(source = "order.id", target = "orderId")
-        // Map from OrderItem.order.id to OrderItemDto.orderId
+        // Map from OrderItem.order.id to OrderItemDto.orderId - now a String
     OrderItemDto toDto(OrderItem orderItem);
 
     List<OrderItemDto> toDtoList(List<OrderItem> orderItems);

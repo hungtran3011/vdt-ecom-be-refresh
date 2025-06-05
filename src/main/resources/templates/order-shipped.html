@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Shipped</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #fd7e14 0%, #e85d04 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .shipping-summary {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .shipping-details {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .shipping-details th,
+        .shipping-details td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .shipping-details th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .tracking-info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .tracking-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fd7e14;
+            letter-spacing: 2px;
+            margin: 10px 0;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #fd7e14;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .shipped-icon {
+            font-size: 48px;
+            color: #fd7e14;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .delivery-estimate {
+            background: #e2e3e5;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Order Shipped!</h1>
+            <p>Your package is on its way</p>
+        </div>
+        
+        <div class="content">
+            <div class="shipped-icon">🚚</div>
+            
+            <h2>Great news!</h2>
+            
+            <p>Your order <strong th:text="${orderId}">ORDER123</strong> has been shipped and is on its way to you!</p>
+            
+            <div class="tracking-info">
+                <h3>Track Your Package</h3>
+                <p>Your tracking number is:</p>
+                <div class="tracking-number" th:text="${trackingNumber}">TN123456789</div>
+                <a href="#" class="btn" th:href="@{${trackingUrl}}" th:if="${trackingUrl}">Track Package</a>
+            </div>
+            
+            <div class="shipping-summary">
+                <h3>Shipping Information</h3>
+                <table class="shipping-details">
+                    <tr>
+                        <th>Order ID</th>
+                        <td th:text="${orderId}">ORDER123</td>
+                    </tr>
+                    <tr>
+                        <th>Shipped Date</th>
+                        <td th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy')}">Jan 01, 2024</td>
+                    </tr>
+                    <tr>
+                        <th>Shipping Method</th>
+                        <td th:text="${shippingMethod}">Standard Shipping</td>
+                    </tr>
+                    <tr>
+                        <th>Carrier</th>
+                        <td th:text="${carrier}">VDT Express</td>
+                    </tr>
+                    <tr>
+                        <th>Delivery Address</th>
+                        <td th:text="${deliveryAddress}">123 Main St, City, Country</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="delivery-estimate">
+                <h3>📅 Estimated Delivery</h3>
+                <p style="font-size: 18px; font-weight: bold; color: #fd7e14;" th:text="${estimatedDelivery}">January 5-7, 2024</p>
+                <p style="font-size: 14px; color: #666;">Delivery times may vary based on your location and weather conditions</p>
+            </div>
+            
+            <h3>What to expect:</h3>
+            <ul>
+                <li><strong>Package tracking:</strong> You can track your package using the tracking number above</li>
+                <li><strong>Delivery updates:</strong> You'll receive SMS/email updates as your package moves</li>
+                <li><strong>Delivery attempt:</strong> Our carrier will attempt delivery during business hours</li>
+                <li><strong>Delivery confirmation:</strong> You'll receive a confirmation email once delivered</li>
+            </ul>
+            
+            <p><strong>Delivery Instructions:</strong></p>
+            <p th:if="${deliveryInstructions}" th:text="${deliveryInstructions}">Please leave package at front door if no one is home.</p>
+            <p th:unless="${deliveryInstructions}">No special delivery instructions provided.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="btn">View Order Details</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for your order!</p>
+            <p>If you have any questions about your shipment, please contact our customer service team.</p>
+            <p>© 2024 VDT E-Commerce. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

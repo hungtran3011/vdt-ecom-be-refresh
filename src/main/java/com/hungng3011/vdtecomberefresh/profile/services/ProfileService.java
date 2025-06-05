@@ -53,7 +53,7 @@ public class ProfileService {
 
 
         Profile saved = repository.save(entityToSave);
-        return mapper.toDto(saved);
+        return mapper.updateEntityFromDto(saved);
     }
 
     @Transactional

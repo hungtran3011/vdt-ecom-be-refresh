@@ -14,7 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -51,7 +51,7 @@ class OrderControllerTest {
         orderDto = new OrderDto();
         orderDto.setId(orderId);
         orderDto.setUserId("user123");
-        orderDto.setCreatedAt(Instant.now().toString());
+        orderDto.setCreatedAt(LocalDateTime.now());
         orderDto.setItems(Collections.emptyList());
     }
 

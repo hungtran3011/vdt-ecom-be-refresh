@@ -17,10 +17,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.hungng3011.vdtecomberefresh.exception.category.CategoryProcessingException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -95,7 +95,8 @@ public class CategoryService {
         List<Product> products = productRepository.findByCategory(category);
         if (products != null && !products.isEmpty()) {
             logger.warn("Cannot update category with id {} because it is associated with products", dto.getId());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category is associated with products and cannot be updated");
+            throw new CategoryProcessingException("CATEGORY_HAS_PRODUCTS", 
+                "Category is associated with products and cannot be updated", dto.getId());
         }
         CategoryDto categoryDto = categoryMapper.toDto(category);
         category.setName(dto.getName());
@@ -152,7 +153,7 @@ public class CategoryService {
             categoryRepository.delete(category);
         } else {
             logger.warn("Category with id {} not found for deletion", id);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new CategoryProcessingException("CATEGORY_NOT_FOUND", "Category not found", id);
         }
     }
 }

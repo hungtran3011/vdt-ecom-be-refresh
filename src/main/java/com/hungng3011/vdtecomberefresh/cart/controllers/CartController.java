@@ -2,6 +2,8 @@ package com.hungng3011.vdtecomberefresh.cart.controllers;
 
 import com.hungng3011.vdtecomberefresh.cart.dtos.CartDto;
 import com.hungng3011.vdtecomberefresh.cart.services.CartService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +16,7 @@ public class CartController {
     private final CartService cartService;
 
     @PostMapping
-    public ResponseEntity<CartDto> createCart(@RequestBody CartDto cartDto) {
+    public ResponseEntity<CartDto> createCart(@Valid @RequestBody CartDto cartDto) {
         CartDto createdCart = cartService.create(cartDto);
         return new ResponseEntity<>(createdCart, HttpStatus.CREATED);
     }

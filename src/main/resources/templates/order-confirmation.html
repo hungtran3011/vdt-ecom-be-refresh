@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .order-summary {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .order-details {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .order-details th,
+        .order-details td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .order-details th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .item-row {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .item-row:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Order Confirmed!</h1>
+            <p>Thank you for your purchase</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello <span th:text="${customerName}">Customer</span>!</h2>
+            
+            <p>We're excited to confirm that we've received your order and are preparing it for shipment.</p>
+            
+            <div class="order-summary">
+                <h3>Order Summary</h3>
+                <table class="order-details">
+                    <tr>
+                        <th>Order ID</th>
+                        <td th:text="${order.id}">ORDER123</td>
+                    </tr>
+                    <tr>
+                        <th>Order Date</th>
+                        <td th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}">Jan 01, 2024 10:00</td>
+                    </tr>
+                    <tr>
+                        <th>Delivery Address</th>
+                        <td th:text="${order.address}">123 Main St, City, Country</td>
+                    </tr>
+                    <tr>
+                        <th>Phone</th>
+                        <td th:text="${order.phone}">+1234567890</td>
+                    </tr>
+                    <tr>
+                        <th>Payment Method</th>
+                        <td th:text="${order.paymentMethod}">Credit Card</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <h3>Items Ordered</h3>
+            <div th:if="${order.items != null and !order.items.isEmpty()}">
+                <div th:each="item : ${order.items}" class="item-row">
+                    <strong th:text="${item.productName}">Product Name</strong><br>
+                    <span>Quantity: <span th:text="${item.quantity}">1</span></span><br>
+                    <span>Price: $<span th:text="${item.price}">99.99</span></span><br>
+                    <span>Subtotal: $<span th:text="${item.quantity * item.price}">99.99</span></span>
+                </div>
+            </div>
+            <div th:if="${order.items == null or order.items.isEmpty()}">
+                <p>No items found in this order.</p>
+            </div>
+            
+            <div class="total-amount">
+                Total: $<span th:text="${totalAmount}">199.99</span>
+            </div>
+            
+            <div th:if="${order.note != null and !order.note.isEmpty()}">
+                <h3>Special Instructions</h3>
+                <p th:text="${order.note}">Customer notes here</p>
+            </div>
+            
+            <p>We'll send you another email with tracking information once your order ships.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="btn">Track Your Order</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for shopping with VDT E-Commerce!</p>
+            <p>If you have any questions, please contact our customer service team.</p>
+            <p>© 2024 VDT E-Commerce. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

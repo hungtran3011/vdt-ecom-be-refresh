@@ -14,15 +14,15 @@ import com.hungng3011.vdtecomberefresh.product.entities.VariationDynamicValue;
 import com.hungng3011.vdtecomberefresh.product.mappers.ProductMapper;
 import com.hungng3011.vdtecomberefresh.product.repositories.ProductRepository;
 import com.hungng3011.vdtecomberefresh.stock.StockService;
+import com.hungng3011.vdtecomberefresh.exception.product.ProductProcessingException;
 import org.springframework.cache.annotation.Cacheable;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +61,7 @@ public class ProductService {
 
         // Set category
         Category category = categoryRepository.findById(request.getCategoryId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
+            .orElseThrow(() -> new ProductProcessingException("Category not found", request.getCategoryId()));
         product.setCategory(category);
 
         // Initialize collections to avoid NPEs
@@ -80,10 +80,8 @@ public class ProductService {
                 CategoryDynamicField field = entityManager.find(CategoryDynamicField.class, fieldId);
 
                 if (field == null) {
-                    throw new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Category dynamic field not found with id: " + fieldId
-                    );
+                    throw new ProductProcessingException("CATEGORY_FIELD_NOT_FOUND", 
+                        "Category dynamic field not found", fieldId);
                 }
 
                 // Create dynamic value
@@ -119,10 +117,8 @@ public class ProductService {
                         CategoryDynamicField field = entityManager.find(CategoryDynamicField.class, fieldId);
 
                         if (field == null) {
-                            throw new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND,
-                                    "Category dynamic field not found with id: " + fieldId
-                            );
+                            throw new ProductProcessingException("CATEGORY_FIELD_NOT_FOUND", 
+                                "Category dynamic field not found", fieldId);
                         }
 
                         // Create dynamic value
@@ -141,7 +137,8 @@ public class ProductService {
 
         // Reload the complete product with all relationships
         Product finalProduct = productRepository.findById(savedProduct.getId())
-            .orElseThrow(() -> new IllegalStateException("Product not found after saving"));
+            .orElseThrow(() -> new ProductProcessingException("PRODUCT_NOT_FOUND", 
+                "Product not found after saving", savedProduct.getId()));
         return productMapper.toDto(finalProduct);
     }
 
@@ -150,15 +147,14 @@ public class ProductService {
         logger.info("Updating product: {}", request);
 
         if (request.getId() == null) {
-            throw new IllegalArgumentException("Product ID is required for update");
+            throw new ProductProcessingException("PRODUCT_ID_REQUIRED", 
+                "Product ID is required for update");
         }
 
         // Fetch the existing product
         Product existingProduct = productRepository.findById(request.getId())
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Product not found with id: " + request.getId()
-            ));
+            .orElseThrow(() -> new ProductProcessingException("PRODUCT_NOT_FOUND", 
+                "Product not found", request.getId()));
 
         // Update basic product information
         existingProduct.setName(request.getName());
@@ -169,20 +165,18 @@ public class ProductService {
         // Update category if changed
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Category not found with id: " + request.getCategoryId()
-                ));
+                .orElseThrow(() -> new ProductProcessingException("CATEGORY_NOT_FOUND", 
+                    "Category not found", request.getCategoryId()));
             existingProduct.setCategory(category);
         }
 
         // Save updates to base product
-        existingProduct = productRepository.saveAndFlush(existingProduct);
+        Product updatedProduct = productRepository.saveAndFlush(existingProduct);
 
         // Handle dynamic values - clear and recreate approach
         if (request.getDynamicValues() != null) {
             // Clear existing values
-            existingProduct.getDynamicValues().clear();
+            updatedProduct.getDynamicValues().clear();
             entityManager.flush();
 
             // Add new values
@@ -191,19 +185,17 @@ public class ProductService {
                 CategoryDynamicField field = entityManager.find(CategoryDynamicField.class, fieldId);
 
                 if (field == null) {
-                    throw new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Category dynamic field not found with id: " + fieldId
-                    );
+                    throw new ProductProcessingException("CATEGORY_FIELD_NOT_FOUND", 
+                        "Category dynamic field not found", fieldId);
                 }
 
                 var dynamicValue = new ProductDynamicValue();
-                dynamicValue.setProduct(existingProduct);
+                dynamicValue.setProduct(updatedProduct);
                 dynamicValue.setField(field);
                 dynamicValue.setValue(dvDto.getValue());
 
                 entityManager.persist(dynamicValue);
-                existingProduct.getDynamicValues().add(dynamicValue);
+                updatedProduct.getDynamicValues().add(dynamicValue);
             }
             entityManager.flush();
         }
@@ -211,23 +203,23 @@ public class ProductService {
         // Handle variations - clear and recreate approach
         if (request.getVariations() != null) {
             // Remove all existing variations
-            for (Variation variation : new ArrayList<>(existingProduct.getVariations())) {
+            for (Variation variation : new ArrayList<>(updatedProduct.getVariations())) {
                 entityManager.remove(variation);
             }
-            existingProduct.getVariations().clear();
+            updatedProduct.getVariations().clear();
             entityManager.flush();
 
             // Create new variations
             for (VariationDto vDto : request.getVariations()) {
                 Variation variation = new Variation();
-                variation.setProduct(existingProduct);
+                variation.setProduct(updatedProduct);
                 variation.setName(vDto.getName());
                 variation.setType(vDto.getType());
                 variation.setAdditionalPrice(vDto.getAdditionalPrice());
                 variation.setDynamicValues(new ArrayList<>());
 
                 entityManager.persist(variation);
-                existingProduct.getVariations().add(variation);
+                updatedProduct.getVariations().add(variation);
 
                 // Add variation dynamic values
                 if (vDto.getDynamicValues() != null) {
@@ -236,10 +228,8 @@ public class ProductService {
                         CategoryDynamicField field = entityManager.find(CategoryDynamicField.class, fieldId);
 
                         if (field == null) {
-                            throw new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND,
-                                    "Category dynamic field not found with id: " + fieldId
-                            );
+                            throw new ProductProcessingException("CATEGORY_FIELD_NOT_FOUND", 
+                                "Category dynamic field not found", fieldId);
                         }
 
                         var dynamicValue = new VariationDynamicValue();
@@ -256,8 +246,9 @@ public class ProductService {
         }
 
         // Reload the complete product with all relationships
-        Product finalProduct = productRepository.findById(existingProduct.getId())
-            .orElseThrow(() -> new IllegalStateException("Product not found after update"));
+        Product finalProduct = productRepository.findById(updatedProduct.getId())
+            .orElseThrow(() -> new ProductProcessingException("PRODUCT_NOT_FOUND", 
+                "Product not found after update", updatedProduct.getId()));
 
         return productMapper.toDto(finalProduct);
     }
@@ -265,7 +256,7 @@ public class ProductService {
     public void delete(Long id) {
        logger.info("Deleting product by id: {}", id);
        Product product = productRepository.findById(id)
-               .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found with id: " + id));
+               .orElseThrow(() -> new ProductProcessingException("PRODUCT_NOT_FOUND", "Product not found", id));
 
        // Remove all product dynamic values
        if (product.getDynamicValues() != null) {

@@ -1,10 +1,10 @@
 spring:
   profiles:
-    active: test
+    active: production
   application:
     name: ecom
   config:
-    import: file:src/main/resources/db.yml, file:src/main/resources/media.properties, optional:file:src/main/resources/security.yml
+    import: file:src/main/resources/db.yml, file:src/main/resources/media.properties, optional:file:src/main/resources/security.yml, file:src/main/resources/viettel-payment.yml, file:src/main/resources/mail.yml
   datasource:
     driver-class-name: org.postgresql.Driver
   jpa:

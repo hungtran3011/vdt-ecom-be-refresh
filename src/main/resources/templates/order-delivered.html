@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Delivered</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .delivery-summary {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .delivery-details {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .delivery-details th,
+        .delivery-details td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .delivery-details th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .btn-review {
+            background: #fd7e14;
+        }
+        .delivered-icon {
+            font-size: 48px;
+            color: #28a745;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .review-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .rating {
+            color: #ffc107;
+            font-size: 24px;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Order Delivered!</h1>
+            <p>Your package has been successfully delivered</p>
+        </div>
+        
+        <div class="content">
+            <div class="delivered-icon">✅</div>
+            
+            <h2>Delivery Confirmed!</h2>
+            
+            <p>Great news! Your order <strong th:text="${orderId}">ORDER123</strong> has been successfully delivered.</p>
+            
+            <div class="success-message">
+                <h3>🏠 Package Delivered</h3>
+                <p style="font-size: 18px; margin: 10px 0;">Your order was delivered on <strong th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy')}">January 5, 2024</strong></p>
+            </div>
+            
+            <div class="delivery-summary">
+                <h3>Delivery Details</h3>
+                <table class="delivery-details">
+                    <tr>
+                        <th>Order ID</th>
+                        <td th:text="${orderId}">ORDER123</td>
+                    </tr>
+                    <tr>
+                        <th>Tracking Number</th>
+                        <td th:text="${trackingNumber}">TN123456789</td>
+                    </tr>
+                    <tr>
+                        <th>Delivered Date</th>
+                        <td th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}">Jan 05, 2024 14:30</td>
+                    </tr>
+                    <tr>
+                        <th>Delivered To</th>
+                        <td th:text="${deliveryAddress}">123 Main St, City, Country</td>
+                    </tr>
+                    <tr>
+                        <th>Received By</th>
+                        <td th:text="${receivedBy}">Customer/Left at door</td>
+                    </tr>
+                    <tr>
+                        <th>Delivery Method</th>
+                        <td th:text="${deliveryMethod}">Front door delivery</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div th:if="${deliveryPhoto}">
+                <h3>📸 Delivery Photo</h3>
+                <p>Our delivery partner took a photo of your delivered package:</p>
+                <div style="text-align: center; margin: 20px 0;">
+                    <img th:src="${deliveryPhoto}" alt="Delivery Photo" style="max-width: 100%; border-radius: 6px; border: 1px solid #ddd;">
+                </div>
+            </div>
+            
+            <div class="review-section">
+                <h3>⭐ How was your experience?</h3>
+                <p>We'd love to hear about your shopping experience! Your feedback helps us improve our service.</p>
+                
+                <div class="rating">
+                    ⭐ ⭐ ⭐ ⭐ ⭐
+                </div>
+                
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="#" class="btn btn-review">Leave a Review</a>
+                </div>
+            </div>
+            
+            <h3>What's next?</h3>
+            <ul>
+                <li><strong>Enjoy your purchase:</strong> We hope you love your new items!</li>
+                <li><strong>Need support?:</strong> If you have any issues with your order, contact our customer service</li>
+                <li><strong>Return/Exchange:</strong> Items can be returned within 30 days of delivery</li>
+                <li><strong>Warranty:</strong> Don't forget to register your products for warranty coverage</li>
+            </ul>
+            
+            <p><strong>🔄 Need to return or exchange something?</strong><br>
+            You have 30 days from delivery to initiate a return or exchange. Items must be in original condition.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="btn">Order Again</a>
+                <a href="#" class="btn">Contact Support</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🎉 Thank you for choosing VDT E-Commerce!</p>
+            <p>We hope you love your purchase. Don't forget to follow us on social media for the latest deals!</p>
+            <p>© 2024 VDT E-Commerce. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

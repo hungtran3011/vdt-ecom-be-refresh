@@ -15,4 +15,13 @@ public interface ProfileMapper {
     AddressDto toDto(Address address);
 
     Address toEntity(AddressDto addressDto);
+
+    default ProfileDto updateEntityFromDto(Profile entity) {
+        if (entity == null) {
+            return null;
+        }
+        ProfileDto dto = toDto(entity);
+        toEntity(dto);
+        return dto;
+    }
 }

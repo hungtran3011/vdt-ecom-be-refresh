@@ -25,6 +25,9 @@ import java.util.List;
 import java.security.KeyPair; // New import
 import java.security.KeyPairGenerator; // New import
 import java.security.interfaces.RSAPublicKey; // New import
+import java.util.Collection; // New import
+import java.util.Map; // New import
+import org.springframework.security.core.authority.AuthorityUtils; // New import
 
 @Configuration
 @EnableWebSecurity
@@ -55,7 +58,7 @@ public class SecurityConfig {
                         // Authenticated endpoints
                         .requestMatchers("/v1/carts/**").authenticated()
                         .requestMatchers("/v1/orders/**").authenticated()
-                        .requestMatchers("/v1/users/**").authenticated()
+                        .requestMatchers("/v1/profiles/**").authenticated()
 
                         // Role-based access
                         .requestMatchers(HttpMethod.POST, "/v1/products/**").hasAnyRole("SELLER", "ADMIN")
@@ -121,12 +124,17 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("realm_access.roles");
-
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<String> roles =
+                ((List<String>) ((Map<String, Object>) jwt.getClaims()
+                       .getOrDefault("realm_access", Map.of()))
+                       .getOrDefault("roles", List.of()))
+                       .stream()
+                       .map(r -> "ROLE_" + r)
+                       .toList();
+            return AuthorityUtils.createAuthorityList(roles.toArray(new String[0]));
+        });
         return converter;
     }
 

@@ -1,0 +1,110 @@
+{
+  "groups": [
+    {
+      "name": "viettel.payment",
+      "type": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment",
+      "type": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig",
+      "sourceMethod": "getCurrentEnvironment()"
+    },
+    {
+      "name": "viettel.payment.partner",
+      "type": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$PartnerConfig",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig",
+      "sourceMethod": "getPartner()"
+    },
+    {
+      "name": "viettel.payment.settings",
+      "type": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$SettingsConfig",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig",
+      "sourceMethod": "getSettings()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "viettel.payment.active-environment",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment.access-token",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment.api-url",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment.merchant-code",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment.partner-public-key",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment.private-key",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig"
+    },
+    {
+      "name": "viettel.payment.current-environment.public-key",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig"
+    },
+    {
+      "name": "viettel.payment.environments",
+      "type": "java.util.Map<java.lang.String,com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$EnvironmentConfig>",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig"
+    },
+    {
+      "name": "viettel.payment.partner.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$PartnerConfig"
+    },
+    {
+      "name": "viettel.payment.partner.ipn-path",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$PartnerConfig"
+    },
+    {
+      "name": "viettel.payment.partner.order-confirmation-path",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$PartnerConfig"
+    },
+    {
+      "name": "viettel.payment.partner.redirect-path",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$PartnerConfig"
+    },
+    {
+      "name": "viettel.payment.settings.default-expire-after-minutes",
+      "type": "java.lang.Integer",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$SettingsConfig"
+    },
+    {
+      "name": "viettel.payment.settings.default-return-type",
+      "type": "java.lang.String",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$SettingsConfig"
+    },
+    {
+      "name": "viettel.payment.settings.max-retry-count",
+      "type": "java.lang.Integer",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$SettingsConfig"
+    },
+    {
+      "name": "viettel.payment.settings.retry-interval-minutes",
+      "type": "java.lang.Integer",
+      "sourceType": "com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig$SettingsConfig"
+    }
+  ],
+  "hints": []
+}
