@@ -8,13 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -101,7 +99,7 @@ public class ViettelApiClient {
                 httpPost.setHeader("Signature", signature);
                 httpPost.setEntity(new StringEntity(requestBody, StandardCharsets.UTF_8));
                 
-                try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                try (ClassicHttpResponse response = httpClient.executeOpen(null, httpPost, null)) {
                     String responseBody = new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
                     log.debug("Viettel Response Status: {}", response.getCode());
                     log.debug("Viettel Response Body: {}", responseBody);
@@ -158,7 +156,7 @@ public class ViettelApiClient {
                 httpPost.setHeader("Signature", signature);
                 httpPost.setEntity(new StringEntity(requestBody, StandardCharsets.UTF_8));
                 
-                try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                try (ClassicHttpResponse response = httpClient.executeOpen(null, httpPost, null)) {
                     String responseBody = new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
                     log.debug("Viettel Refund Response Status: {}", response.getCode());
                     log.debug("Viettel Refund Response Body: {}", responseBody);
@@ -214,7 +212,7 @@ public class ViettelApiClient {
                 httpPost.setHeader("Signature", signature);
                 httpPost.setEntity(new StringEntity(requestBody, StandardCharsets.UTF_8));
                 
-                try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                try (ClassicHttpResponse response = httpClient.executeOpen(null, httpPost, null)) {
                     String responseBody = new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
                     log.debug("Viettel Query Response Status: {}", response.getCode());
                     log.debug("Viettel Query Response Body: {}", responseBody);

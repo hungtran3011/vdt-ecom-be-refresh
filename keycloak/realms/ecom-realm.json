@@ -1,0 +1,93 @@
+{
+  "realm": "ecom",
+  "enabled": true,
+  "displayName": "E-commerce Application",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>E-commerce</span></div>",
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+  "defaultRoles": ["offline_access", "uma_authorization", "customer"],
+  "roles": {
+    "realm": [
+      {
+        "name": "customer",
+        "description": "Customer role"
+      },
+      {
+        "name": "seller",
+        "description": "Seller role"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "ecom-be",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "mDO0En18PA6yi6Z7v36tSFjWiS17CeGx",
+      "redirectUris": ["http://localhost:8888/*"],
+      "webOrigins": ["http://localhost:8888"],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "access": {
+        "view": true,
+        "configure": true,
+        "manage": true
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    }
+  ],
+  "smtpServer": {
+    "host": "${env.KC_SMTP_HOST:mail.example.test}",
+    "port": "${env.KC_SMTP_PORT:587}",
+    "from": "${env.KC_SMTP_FROM:noreply@example.test}",
+    "fromDisplayName": "E-commerce Account Service",
+    "auth": true,
+    "user": "${env.KC_SMTP_USERNAME:noreply@example.test}",
+    "password": "${env.KC_SMTP_PASSWORD:noreplypass}",
+    "ssl": "${env.KC_SMTP_SSL:false}",
+    "starttls": "${env.KC_SMTP_STARTTLS:false}"
+  },
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en"],
+  "defaultLocale": "en"
+}

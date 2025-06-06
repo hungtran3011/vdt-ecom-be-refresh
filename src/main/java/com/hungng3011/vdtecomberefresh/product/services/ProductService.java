@@ -80,6 +80,7 @@ public class ProductService {
                 CategoryDynamicField field = entityManager.find(CategoryDynamicField.class, fieldId);
 
                 if (field == null) {
+                    productRepository.delete(savedProduct); // Clean up saved product to prevent orphaned records
                     throw new ProductProcessingException("CATEGORY_FIELD_NOT_FOUND", 
                         "Category dynamic field not found", fieldId);
                 }

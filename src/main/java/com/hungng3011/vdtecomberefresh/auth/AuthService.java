@@ -99,21 +99,28 @@ public class AuthService {
             user.setEmailVerified(true);
 
             // Create user
-            Response response = usersResource.create(user);
-            
-            if (response.getStatus() == 201) {
-                String userId = extractUserIdFromResponse(response);
+            Response response = null;
+            try {
+                response = usersResource.create(user);
                 
-                // Set password
-                setUserPassword(userId, password, false);
-                
-                // Assign default CUSTOMER role
-                assignRoleToUser(userId, "CUSTOMER");
-                
-                log.info("User created successfully: {}", username);
-                return userId;
-            } else {
-                throw new RuntimeException("Failed to create user. Status: " + response.getStatus());
+                if (response.getStatus() == 201) {
+                    String userId = extractUserIdFromResponse(response);
+                    
+                    // Set password
+                    setUserPassword(userId, password, false);
+                    
+                    // Assign default CUSTOMER role
+                    assignRoleToUser(userId, "CUSTOMER");
+                    
+                    log.info("User created successfully: {}", username);
+                    return userId;
+                } else {
+                    throw new RuntimeException("Failed to create user. Status: " + response.getStatus());
+                }
+            } finally {
+                if (response != null) {
+                    response.close();
+                }
             }
         } catch (Exception e) {
             log.error("Error creating user: {}", username, e);

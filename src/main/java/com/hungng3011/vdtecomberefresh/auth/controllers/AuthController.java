@@ -1,12 +1,18 @@
 package com.hungng3011.vdtecomberefresh.auth.controllers;
 
-import com.hungng3011.vdtecomberefresh.auth.AuthService;
-import com.hungng3011.vdtecomberefresh.auth.dtos.AuthResponseDto;
-import com.hungng3011.vdtecomberefresh.auth.dtos.UserRegistrationDto;
-import com.hungng3011.vdtecomberefresh.profile.services.ProfileService;
-import com.hungng3011.vdtecomberefresh.profile.dtos.ProfileDto;
+import com.hungng3011.vdtecomberefresh.auth.dto.UserRegistrationDto;
+import com.hungng3011.vdtecomberefresh.auth.dto.PasswordResetDto;
+import com.hungng3011.vdtecomberefresh.auth.dto.RoleAssignmentDto;
+import com.hungng3011.vdtecomberefresh.auth.dto.UserUpdateDto;
+import com.hungng3011.vdtecomberefresh.auth.services.UserManagementService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,218 +20,196 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import java.util.UUID;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Controller cho xác thực và quản lý người dùng.
+ * REST Controller for authentication and user management operations.
  * 
- * <p>Lớp này được thiết kế để cung cấp một giao diện API thống nhất cho mọi tương tác 
- * liên quan đến xác thực và quản lý người dùng. Việc tập trung các endpoint này vào một 
- * controller riêng biệt (thay vì phân tán qua nhiều module) đảm bảo tính nhất quán trong 
- * cách xử lý các vấn đề về bảo mật và giúp dễ dàng áp dụng các chính sách bảo mật toàn cục.</p>
+ * IMPORTANT: This controller is for ADMIN operations only.
+ * In PKCE flow:
+ * 1. Frontend applications authenticate directly with Keycloak
+ * 2. JWTs are validated by Spring Security
+ * 3. This controller provides admin endpoints for user management
  * 
- * <p>Các quyết định thiết kế chính bao gồm:</p>
- * <ul>
- *   <li><strong>Tách biệt AuthController và ProfileController</strong>: Phân tách rõ ràng giữa 
- *       việc xác thực (ai được phép truy cập) và thông tin hồ sơ người dùng (thông tin cá nhân),
- *       giúp áp dụng các chiến lược bảo mật khác nhau cho từng loại dữ liệu</li>
- *   <li><strong>RESTful API</strong>: Tuân thủ nguyên tắc RESTful với các endpoint cụ thể 
- *       cho từng chức năng (đăng ký, đăng nhập, đổi mật khẩu...), giúp giao diện API rõ ràng 
- *       và dễ sử dụng</li>
- *   <li><strong>Ủy thác logic xử lý cho service</strong>: Controller chỉ xử lý yêu cầu HTTP và 
- *       định dạng phản hồi, trong khi logic nghiệp vụ được ủy thác cho AuthService, giúp tăng 
- *       khả năng tái sử dụng và testability</li>
- * </ul>
- * 
- * <p>Lớp này tương tác chặt chẽ với AuthService để thực hiện các thao tác xác thực và 
- * ProfileService để tạo và quản lý thông tin hồ sơ người dùng sau khi xác thực.</p>
+ * Authentication flow:
+ * - Frontend → Keycloak (PKCE) → JWT
+ * - Backend validates JWT and provides protected resources
  */
 @RestController
 @RequestMapping("/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Authentication", description = "User management and authentication operations")
+@SecurityRequirement(name = "bearer-jwt")
 public class AuthController {
 
-    private final AuthService authService;
-    private final ProfileService profileService;
+    private final UserManagementService userManagementService;
 
     /**
-     * Đăng ký người dùng mới (chỉ Admin).
-     * 
-     * <p>Endpoint này được thiết kế để chỉ cho phép quản trị viên tạo tài khoản mới, 
-     * thay vì cho phép đăng ký tự do. Cách tiếp cận này được chọn vì:</p>
-     * <ul>
-     *   <li>Đảm bảo kiểm soát chặt chẽ quy trình onboarding người dùng trong môi trường doanh nghiệp</li>
-     *   <li>Ngăn chặn tình trạng đăng ký tài khoản giả mạo hoặc spam</li>
-     *   <li>Cho phép xác minh và phê duyệt người dùng trước khi cấp quyền truy cập</li>
-     * </ul>
-     * 
-     * <p>Quy trình xử lý bao gồm:</p>
-     * <ol>
-     *   <li>Tạo người dùng mới trong Keycloak thông qua AuthService</li>
-     *   <li>Tạo hồ sơ người dùng tương ứng trong hệ thống cơ sở dữ liệu local</li>
-     *   <li>Gán các quyền mặc định cho người dùng mới</li>
-     * </ol>
-     * 
-     * <p>Chúng tôi sử dụng {@link @PreAuthorize} để thực thi kiểm tra quyền trước khi
-     * phương thức được thực thi, cung cấp lớp bảo mật sớm và rõ ràng.</p>
-     * 
-     * @param registrationDto Thông tin đăng ký người dùng mới, được xác thực bởi Bean Validation
-     * @return AuthResponseDto chứa thông tin về người dùng đã được tạo thành công
-     */
-    @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponseDto> registerUser(@Valid @RequestBody UserRegistrationDto registrationDto) {
-        try {
-            String userId = authService.createUser(
-                    registrationDto.getUsername(),
-                    registrationDto.getEmail(),
-                    registrationDto.getFirstName(),
-                    registrationDto.getLastName(),
-                    registrationDto.getPassword()
-            );
-
-            // Create local profile for the user
-            ProfileDto profileDto = new ProfileDto();
-            profileDto.setUserId(UUID.fromString(userId));
-            profileDto.setFullName(registrationDto.getFirstName() + " " + registrationDto.getLastName());
-            profileDto.setEmail(registrationDto.getEmail());
-            profileService.createOrUpdate(profileDto);
-
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .userId(userId)
-                    .username(registrationDto.getUsername())
-                    .email(registrationDto.getEmail())
-                    .message("User registered successfully")
-                    .success(true)
-                    .build();
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            log.error("Error registering user: {}", registrationDto.getUsername(), e);
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .message("Failed to register user: " + e.getMessage())
-                    .success(false)
-                    .build();
-            
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-    }
-
-    /**
-     * Assign role to user (Admin only)
-     */
-    @PostMapping("/users/{userId}/roles/{roleName}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponseDto> assignRole(@PathVariable String userId, @PathVariable String roleName) {
-        try {
-            authService.assignRoleToUser(userId, roleName.toUpperCase());
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .userId(userId)
-                    .message("Role assigned successfully")
-                    .success(true)
-                    .build();
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error assigning role {} to user {}", roleName, userId, e);
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .message("Failed to assign role: " + e.getMessage())
-                    .success(false)
-                    .build();
-            
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-    }
-
-    /**
-     * Remove role from user (Admin only)
-     */
-    @DeleteMapping("/users/{userId}/roles/{roleName}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponseDto> removeRole(@PathVariable String userId, @PathVariable String roleName) {
-        try {
-            authService.removeRoleFromUser(userId, roleName.toUpperCase());
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .userId(userId)
-                    .message("Role removed successfully")
-                    .success(true)
-                    .build();
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error removing role {} from user {}", roleName, userId, e);
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .message("Failed to remove role: " + e.getMessage())
-                    .success(false)
-                    .build();
-            
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-    }
-
-    /**
-     * Enable/disable user (Admin only)
-     */
-    @PutMapping("/users/{userId}/enabled")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponseDto> setUserEnabled(@PathVariable String userId, @RequestParam boolean enabled) {
-        try {
-            authService.setUserEnabled(userId, enabled);
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .userId(userId)
-                    .message("User " + (enabled ? "enabled" : "disabled") + " successfully")
-                    .success(true)
-                    .build();
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error {} user {}", enabled ? "enabling" : "disabling", userId, e);
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .message("Failed to " + (enabled ? "enable" : "disable") + " user: " + e.getMessage())
-                    .success(false)
-                    .build();
-            
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-    }
-
-    /**
-     * Get current user info
+     * Get current user information from JWT token
+     * This endpoint demonstrates how to extract user info from the PKCE flow JWT
      */
     @GetMapping("/me")
-    public ResponseEntity<AuthResponseDto> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        try {
-            String userId = jwt.getSubject();
-            String username = jwt.getClaimAsString("preferred_username");
-            String email = jwt.getClaimAsString("email");
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .userId(userId)
-                    .username(username)
-                    .email(email)
-                    .message("User info retrieved successfully")
-                    .success(true)
-                    .build();
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error getting current user info", e);
-            
-            AuthResponseDto response = AuthResponseDto.builder()
-                    .message("Failed to get user info: " + e.getMessage())
-                    .success(false)
-                    .build();
-            
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
+    @Operation(summary = "Get current user information from JWT")
+    public ResponseEntity<Map<String, Object>> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
+        Map<String, Object> userInfo = Map.of(
+            "userId", jwt.getSubject(),
+            "username", jwt.getClaimAsString("preferred_username"),
+            "email", jwt.getClaimAsString("email"),
+            "firstName", jwt.getClaimAsString("given_name"),
+            "lastName", jwt.getClaimAsString("family_name"),
+            "roles", jwt.getClaimAsStringList("realm_access.roles")
+        );
+        
+        return ResponseEntity.ok(userInfo);
+    }
+
+    /**
+     * Create a new user (ADMIN only)
+     */
+    @PostMapping("/admin/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Create a new user", description = "Admin operation to create a new user in Keycloak")
+    public ResponseEntity<Map<String, String>> createUser(@Valid @RequestBody UserRegistrationDto userRegistration) {
+        String userId = userManagementService.createUser(userRegistration);
+        
+        Map<String, String> response = Map.of(
+            "message", "User created successfully",
+            "userId", userId
+        );
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Get user by ID (ADMIN only)
+     */
+    @GetMapping("/admin/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get user by ID", description = "Admin operation to retrieve user information")
+    public ResponseEntity<UserRepresentation> getUser(@PathVariable String userId) {
+        UserRepresentation user = userManagementService.getUser(userId);
+        return ResponseEntity.ok(user);
+    }
+
+    /**
+     * Update user information (ADMIN only)
+     */
+    @PutMapping("/admin/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update user information", description = "Admin operation to update user details")
+    public ResponseEntity<Map<String, String>> updateUser(
+            @PathVariable String userId,
+            @Valid @RequestBody UserUpdateDto updateDto) {
+        
+        userManagementService.updateUser(
+            userId,
+            updateDto.email(),
+            updateDto.firstName(),
+            updateDto.lastName()
+        );
+        
+        Map<String, String> response = Map.of("message", "User updated successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Delete user (ADMIN only)
+     */
+    @DeleteMapping("/admin/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete user", description = "Admin operation to delete a user")
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable String userId) {
+        userManagementService.deleteUser(userId);
+        
+        Map<String, String> response = Map.of("message", "User deleted successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Assign role to user (ADMIN only)
+     */
+    @PostMapping("/admin/users/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Assign role to user", description = "Admin operation to assign a role to a user")
+    public ResponseEntity<Map<String, String>> assignRole(@Valid @RequestBody RoleAssignmentDto roleAssignment) {
+        userManagementService.assignRoleToUser(roleAssignment);
+        
+        Map<String, String> response = Map.of("message", "Role assigned successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Remove role from user (ADMIN only)
+     */
+    @DeleteMapping("/admin/users/{userId}/roles/{roleName}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Remove role from user", description = "Admin operation to remove a role from a user")
+    public ResponseEntity<Map<String, String>> removeRole(
+            @PathVariable String userId,
+            @PathVariable String roleName) {
+        
+        userManagementService.removeRoleFromUser(userId, roleName);
+        
+        Map<String, String> response = Map.of("message", "Role removed successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get user roles (ADMIN only)
+     */
+    @GetMapping("/admin/users/{userId}/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get user roles", description = "Admin operation to retrieve all roles assigned to a user")
+    public ResponseEntity<List<RoleRepresentation>> getUserRoles(@PathVariable String userId) {
+        List<RoleRepresentation> roles = userManagementService.getUserRoles(userId);
+        return ResponseEntity.ok(roles);
+    }
+
+    /**
+     * Reset user password (ADMIN only)
+     */
+    @PostMapping("/admin/users/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Reset user password", description = "Admin operation to reset a user's password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody PasswordResetDto passwordReset) {
+        userManagementService.resetUserPassword(passwordReset);
+        
+        Map<String, String> response = Map.of("message", "Password reset successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Enable/disable user (ADMIN only)
+     */
+    @PutMapping("/admin/users/{userId}/enabled")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Enable or disable user", description = "Admin operation to enable or disable a user account")
+    public ResponseEntity<Map<String, String>> setUserEnabled(
+            @PathVariable String userId,
+            @RequestBody Map<String, Boolean> enabledData) {
+        
+        boolean enabled = enabledData.getOrDefault("enabled", true);
+        userManagementService.setUserEnabled(userId, enabled);
+        
+        Map<String, String> response = Map.of(
+            "message", "User " + (enabled ? "enabled" : "disabled") + " successfully"
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Health check endpoint for authentication service
+     */
+    @GetMapping("/health")
+    @Operation(summary = "Authentication service health check")
+    public ResponseEntity<Map<String, String>> health() {
+        Map<String, String> response = Map.of(
+            "status", "UP",
+            "service", "authentication",
+            "timestamp", java.time.Instant.now().toString()
+        );
+        return ResponseEntity.ok(response);
     }
 }
