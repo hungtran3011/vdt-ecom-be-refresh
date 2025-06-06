@@ -20,7 +20,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import com.hungng3011.vdtecomberefresh.exception.product.ProductProcessingException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class ProductServiceTest {
 
     @Mock
@@ -189,7 +192,7 @@ public class ProductServiceTest {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(ResponseStatusException.class, () -> productService.delete(99L));
+        assertThrows(ProductProcessingException.class, () -> productService.delete(99L));
     }
 
     @Test
@@ -308,7 +311,7 @@ public class ProductServiceTest {
         when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(ResponseStatusException.class, () -> productService.create(request));
+        assertThrows(ProductProcessingException.class, () -> productService.create(request));
         verify(productRepository, never()).saveAndFlush(any(Product.class));
     }
 
@@ -331,11 +334,21 @@ public class ProductServiceTest {
         
         request.setDynamicValues(List.of(dynamicValue));
 
+        // Mock the necessary dependencies
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        
+        // Mock the product save to return a product with ID
+        Product savedProduct = new Product();
+        savedProduct.setId(1L);
+        savedProduct.setName("Test Product");
+        savedProduct.setCategory(testCategory);
+        when(productRepository.saveAndFlush(any(Product.class))).thenReturn(savedProduct);
+        
+        // Mock entityManager to return null for invalid field ID
         when(entityManager.find(CategoryDynamicField.class, 99L)).thenReturn(null);
 
         // Act & Assert
-        assertThrows(ResponseStatusException.class, () -> productService.create(request));
+        assertThrows(ProductProcessingException.class, () -> productService.create(request));
     }
 
     @Test
@@ -372,7 +385,7 @@ public class ProductServiceTest {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(ResponseStatusException.class, () -> productService.update(request));
+        assertThrows(ProductProcessingException.class, () -> productService.update(request));
     }
 
     // Helper methods

@@ -29,12 +29,23 @@ public class MediaController {
     public ResponseEntity<?> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "resourceType", defaultValue = "image") String resourceType) {
-        Map<String, Object> result = mediaService.upload(file, resourceType);
-        if (result == null || result.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload file");
+        // Check if file is valid before proceeding
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("File must not be empty");
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        
+        try {
+            Map<String, Object> result = mediaService.upload(file, resourceType);
+            if (result == null || result.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Failed to upload file");
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error uploading file: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{publicId}")

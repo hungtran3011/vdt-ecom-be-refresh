@@ -85,10 +85,17 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/v1/profiles/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> 
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.getWriter().write("Unauthorized");
+                        })
+                )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
                                 .decoder(testJwtDecoder())
@@ -126,13 +133,22 @@ public class SecurityConfig {
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Collection<String> roles =
-                ((List<String>) ((Map<String, Object>) jwt.getClaims()
-                       .getOrDefault("realm_access", Map.of()))
-                       .getOrDefault("roles", List.of()))
-                       .stream()
+            Object realmAccess = jwt.getClaims().getOrDefault("realm_access", Map.of());
+            Object rolesObj = null;
+            if (realmAccess instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> realmAccessMap = (Map<String, Object>) realmAccess;
+                rolesObj = realmAccessMap.getOrDefault("roles", List.of());
+            }
+            
+            Collection<String> roles = List.of();
+            if (rolesObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<String> rolesList = (List<String>) rolesObj;
+                roles = rolesList.stream()
                        .map(r -> "ROLE_" + r)
                        .toList();
+            }
             return AuthorityUtils.createAuthorityList(roles.toArray(new String[0]));
         });
         return converter;

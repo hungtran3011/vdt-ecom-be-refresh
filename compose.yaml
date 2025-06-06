@@ -29,7 +29,11 @@ services:
       - '8080:8080'
     depends_on:
       - postgres
-    command: start-dev --http-enabled=true
+    command: 
+      - start-dev --http-enabled=true
+      - --import-realm
+    volumes:
+      - ./keycloak/realms:/opt/keycloak/data/import
 
   mail-init:
     image: busybox

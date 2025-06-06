@@ -4,8 +4,9 @@ import com.hungng3011.vdtecomberefresh.product.dtos.VariationDto;
 import com.hungng3011.vdtecomberefresh.product.entities.Variation;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface VariationMapper {
     @Mapping(source = "productId", target = "product.id")
     Variation toEntity(VariationDto dto);

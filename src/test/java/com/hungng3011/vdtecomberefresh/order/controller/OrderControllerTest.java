@@ -4,13 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hungng3011.vdtecomberefresh.order.dtos.OrderDto;
 import com.hungng3011.vdtecomberefresh.order.controllers.OrderController;
 import com.hungng3011.vdtecomberefresh.order.services.OrderService;
+import com.hungng3011.vdtecomberefresh.config.SecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,20 +32,28 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(OrderController.class)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import({OrderControllerTest.OrderControllerTestConfig.class, SecurityConfig.class})
+@WithMockUser
 class OrderControllerTest {
+
+    @TestConfiguration
+    static class OrderControllerTestConfig {
+        @Bean
+        public OrderService orderService() {
+            return Mockito.mock(OrderService.class);
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Mock
-    private OrderService orderService;
-
-    @InjectMocks
-    private OrderController orderController;
-
     @Autowired
     private ObjectMapper objectMapper;
+    
+    @Autowired
+    private OrderService orderService;
 
     private OrderDto orderDto;
     private String orderId;

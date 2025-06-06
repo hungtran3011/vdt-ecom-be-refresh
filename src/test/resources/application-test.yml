@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # Use embedded Redis for testing or disable Redis caching in tests
+      enabled: false
+
+mail:
+  smtp:
+    host: localhost
+    port: 3025
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+payment:
+  viettel:
+    base-url: https://test-payment.viettel.vn/api
+    active-environment: TEST
+    merchant-id: test_merchant
+    secret-key: test_secret_key
+    redirect-url: http://localhost:8888/payment/return
+    settings:
+      default-return-type: json
+      default-expire-after-minutes: 30

@@ -4,6 +4,7 @@ import com.hungng3011.vdtecomberefresh.auth.dto.UserRegistrationDto;
 import com.hungng3011.vdtecomberefresh.auth.dto.PasswordResetDto;
 import com.hungng3011.vdtecomberefresh.auth.dto.RoleAssignmentDto;
 import com.hungng3011.vdtecomberefresh.exception.profile.ProfileProcessingException;
+import com.hungng3011.vdtecomberefresh.auth.services.AuthProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
@@ -16,6 +17,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.ws.rs.core.Response;
 import java.util.Arrays;
@@ -34,6 +36,7 @@ import java.util.List;
 public class UserManagementService {
 
     private final Keycloak keycloak;
+    private final AuthProfileService authProfileService;
 
     @Value("${app.keycloak.realm}")
     private String realm;
@@ -41,6 +44,7 @@ public class UserManagementService {
     /**
      * Create a new user in Keycloak using UserRegistrationDto
      */
+    @Transactional
     public String createUser(UserRegistrationDto registrationDto) {
         try {
             RealmResource realmResource = keycloak.realm(realm);
@@ -74,6 +78,14 @@ public class UserManagementService {
                     }
                 }
                 
+                // Create corresponding profile in the application database
+                authProfileService.createProfileForKeycloakUser(
+                    userId, 
+                    registrationDto.getEmail(),
+                    registrationDto.getFirstName(),
+                    registrationDto.getLastName()
+                );
+                
                 log.info("User created successfully: {}", registrationDto.getUsername());
                 return userId;
             } else {
@@ -95,7 +107,9 @@ public class UserManagementService {
 
     /**
      * Update user information
+     * Only updates fields that are provided (non-null)
      */
+    @Transactional
     public void updateUser(String userId, String email, String firstName, String lastName) {
         try {
             RealmResource realmResource = keycloak.realm(realm);
@@ -106,12 +120,22 @@ public class UserManagementService {
                 throw new ProfileProcessingException("USER_NOT_FOUND", "User not found with ID: " + userId);
             }
 
-            user.setEmail(email);
-            user.setFirstName(firstName);
-            user.setLastName(lastName);
+            // Only update fields that are provided (non-null)
+            if (email != null) {
+                user.setEmail(email);
+            }
+            if (firstName != null) {
+                user.setFirstName(firstName);
+            }
+            if (lastName != null) {
+                user.setLastName(lastName);
+            }
 
             userResource.update(user);
             log.info("User updated successfully: {}", userId);
+            
+            // Synchronize changes with the profile database
+            authProfileService.updateProfileFromKeycloakUser(userId, email, firstName, lastName);
         } catch (Exception e) {
             log.error("Error updating user: {}", userId, e);
             throw new ProfileProcessingException(

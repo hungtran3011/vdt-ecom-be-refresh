@@ -76,7 +76,7 @@ class CartServiceTest {
         when(cartRepository.findById(1L)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> cartService.get(1L));
-        assertEquals("Cart not found", exception.getMessage());
+        assertEquals("Cart processing failed for cart 1: Cart not found", exception.getMessage());
         verify(cartRepository, times(1)).findById(1L);
         verify(cartMapper, never()).toDto(any(Cart.class));
     }
@@ -112,7 +112,7 @@ class CartServiceTest {
         when(cartRepository.findById(1L)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> cartService.update(1L, cartDto));
-        assertEquals("Cart not found", exception.getMessage());
+        assertEquals("Cart processing failed for cart 1: Cart not found", exception.getMessage());
         verify(cartRepository, times(1)).findById(1L);
         verify(cartMapper, never()).toEntity(any(CartDto.class));
         verify(cartRepository, never()).save(any(Cart.class));

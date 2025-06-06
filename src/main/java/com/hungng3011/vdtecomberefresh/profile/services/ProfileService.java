@@ -56,14 +56,17 @@ public class ProfileService {
         return mapper.updateEntityFromDto(saved);
     }
 
+    /**
+     * @deprecated Use AuthProfileIntegrationService.syncProfileFromJwt() instead.
+     * This method is kept for backward compatibility but will be removed in a future release.
+     */
     @Transactional
-    public void syncProfileFromToken(Jwt jwt) {
+    @Deprecated
+    public ProfileDto syncProfileFromToken(Jwt jwt) {
         String userIdString = jwt.getSubject();
         if (userIdString == null) {
             log.error("JWT 'sub' claim is missing. Cannot sync profile.");
-            // Depending on requirements, you might throw an exception here
-            // throw new IllegalArgumentException("JWT 'sub' claim is missing for profile sync.");
-            return;
+            throw new IllegalArgumentException("JWT 'sub' claim is missing for profile sync.");
         }
 
         UUID userId;
@@ -71,13 +74,11 @@ public class ProfileService {
             userId = UUID.fromString(userIdString);
         } catch (IllegalArgumentException e) {
             log.error("Invalid UUID format for 'sub' claim: {}. Cannot sync profile.", userIdString, e);
-            // throw new IllegalArgumentException("Invalid UUID format in JWT 'sub' claim.");
-            return;
+            throw new IllegalArgumentException("Invalid UUID format in JWT 'sub' claim: " + userIdString);
         }
 
         String email = jwt.getClaimAsString("email");
         String fullName = jwt.getClaimAsString("name"); // Standard OIDC claim for full name
-
 
         Profile profile = repository.findProfileByUserId(userId)
                 .orElseGet(() -> {
@@ -96,7 +97,8 @@ public class ProfileService {
             profile.setFullName(fullName);
         }
 
-        repository.save(profile);
+        Profile saved = repository.save(profile);
         log.info("Profile synced/updated for userId: {}", userId);
+        return mapper.toDto(saved);
     }
 }
