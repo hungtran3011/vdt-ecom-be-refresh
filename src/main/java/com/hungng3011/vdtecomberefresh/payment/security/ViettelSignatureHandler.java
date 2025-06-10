@@ -14,6 +14,27 @@ import java.util.Base64;
 public class ViettelSignatureHandler {
 
     /**
+     * Decode Base64 string supporting both standard and URL-safe Base64 formats
+     * @param base64String The Base64 encoded string
+     * @return Decoded bytes
+     */
+    private byte[] decodeBase64(String base64String) {
+        try {
+            // First try standard Base64 decoder
+            return Base64.getDecoder().decode(base64String);
+        } catch (IllegalArgumentException e) {
+            try {
+                // If standard fails, try URL-safe Base64 decoder
+                log.debug("Standard Base64 decoding failed, trying URL-safe decoder");
+                return Base64.getUrlDecoder().decode(base64String);
+            } catch (IllegalArgumentException e2) {
+                log.error("Both standard and URL-safe Base64 decoding failed for string: {}", base64String.substring(0, Math.min(20, base64String.length())) + "...");
+                throw new IllegalArgumentException("Invalid Base64 format", e2);
+            }
+        }
+    }
+
+    /**
      * Sign a message using ECDSA with SHA256
      * @param message The message to sign (exact request body JSON or query string)
      * @param privateKeyBase64 The private key in Base64 format
@@ -21,8 +42,8 @@ public class ViettelSignatureHandler {
      */
     public String signMessage(String message, String privateKeyBase64) {
         try {
-            // Decode the private key from Base64
-            byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
+            // Decode the private key from Base64 (support both standard and URL-safe Base64)
+            byte[] privateKeyBytes = decodeBase64(privateKeyBase64);
             
             // Create private key from bytes
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
@@ -58,16 +79,16 @@ public class ViettelSignatureHandler {
      */
     public boolean verifySignature(String message, String signatureBase64, String publicKeyBase64) {
         try {
-            // Decode the public key from Base64
-            byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyBase64);
+            // Decode the public key from Base64 (support both standard and URL-safe Base64)
+            byte[] publicKeyBytes = decodeBase64(publicKeyBase64);
             
             // Create public key from bytes
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
             PublicKey publicKey = keyFactory.generatePublic(keySpec);
             
-            // Decode signature from Base64
-            byte[] signatureBytes = Base64.getDecoder().decode(signatureBase64);
+            // Decode signature from Base64 (support both standard and URL-safe Base64)
+            byte[] signatureBytes = decodeBase64(signatureBase64);
             
             // Verify signature
             Signature signature = Signature.getInstance("SHA256withECDSA");

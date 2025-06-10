@@ -14,7 +14,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder; // New import
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -37,6 +36,9 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
     private String issuerUri;
 
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}")
+    private String jwkSetUri;
+
     @Bean
     @Profile("!test")
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -49,11 +51,17 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         
+                        // Viettel payment webhook endpoints (external callbacks)
+                        .requestMatchers("/api/viettel/partner/order-confirmation").permitAll()
+                        .requestMatchers("/api/viettel/partner/ipn").permitAll()
+                        .requestMatchers("/api/viettel/partner/redirect").permitAll()
+                        
                         // Public read access
                         .requestMatchers(HttpMethod.GET, "/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/media/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/address/**").permitAll()
 
                         // Authenticated endpoints
                         .requestMatchers("/v1/carts/**").authenticated()
@@ -61,9 +69,11 @@ public class SecurityConfig {
                         .requestMatchers("/v1/profiles/**").authenticated()
 
                         // Role-based access
-                        .requestMatchers(HttpMethod.POST, "/v1/products/**").hasAnyRole("SELLER", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/v1/products/**").hasAnyRole("SELLER", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/v1/products/**").hasAnyRole("SELLER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/v1/products/**").hasAnyRole("seller", "admin")
+                        .requestMatchers(HttpMethod.PUT, "/v1/products/**").hasAnyRole("seller", "admin")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/products/**").hasAnyRole("seller", "admin")
+                        .requestMatchers("/v1/stats/**").hasRole("admin")
+                        .requestMatchers(HttpMethod.GET, "/v1/profiles").hasRole("admin")
 
                         .anyRequest().authenticated()
                 )
@@ -108,7 +118,13 @@ public class SecurityConfig {
     @Bean
     @Profile("!test")
     public JwtDecoder jwtDecoder() {
-        return JwtDecoders.fromIssuerLocation(issuerUri);
+        // Create a JWT decoder that fetches keys from the JWK Set URI
+        // This allows us to accept JWTs with localhost issuer while fetching keys from Docker network
+        if (jwkSetUri != null && !jwkSetUri.isEmpty()) {
+            return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        } else {
+            return JwtDecoders.fromIssuerLocation(issuerUri);
+        }
     }
 
     @Bean
@@ -141,13 +157,15 @@ public class SecurityConfig {
                 rolesObj = realmAccessMap.getOrDefault("roles", List.of());
             }
             
-            Collection<String> roles = List.of();
+            Collection<String> roles;
             if (rolesObj instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<String> rolesList = (List<String>) rolesObj;
                 roles = rolesList.stream()
                        .map(r -> "ROLE_" + r)
                        .toList();
+            } else {
+                roles = List.of();
             }
             return AuthorityUtils.createAuthorityList(roles.toArray(new String[0]));
         });

@@ -21,7 +21,7 @@ public class Order {
     @Id
     private String id;
     
-    private String userId; // Matches Keycloak user ID
+    private String userEmail; // User email from Keycloak token
     
     @Enumerated(EnumType.STRING)
     private OrderStatus status;

@@ -5,10 +5,45 @@ services:
       - .env
     ports:
       - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
   redis:
     image: 'redis:latest'
     ports:
       - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  pgadmin:
+    image: 'dpage/pgadmin4:latest'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - '5050:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/misc/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
   keycloak:
     image: 'quay.io/keycloak/keycloak:latest'
     environment:
@@ -18,92 +53,132 @@ services:
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
-      KC_SMTP_HOST: ${KC_SMTP_HOST:-mail.example.test}
+      KC_SMTP_HOST: ${KC_SMTP_HOST:-smtp-relay.brevo.com}
       KC_SMTP_PORT: ${KC_SMTP_PORT:-587}
-      KC_SMTP_FROM: ${KC_SMTP_FROM:-noreply@example.test}
-      KC_SMTP_USERNAME: ${KC_SMTP_USERNAME:-noreply@example.test}
-      KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD:-noreplypass}
+      KC_SMTP_FROM: ${KC_SMTP_FROM:-your-brevo-email@example.com}
+      KC_SMTP_USERNAME: ${KC_SMTP_USERNAME:-your-brevo-email@example.com}
+      KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD:-your-brevo-smtp-key}
       KC_SMTP_SSL: ${KC_SMTP_SSL:-false}
-      KC_SMTP_STARTTLS: ${KC_SMTP_STARTTLS:-false}
+      KC_SMTP_STARTTLS: ${KC_SMTP_STARTTLS:-true}
+      KC_LOG_LEVEL: ${KC_LOG_LEVEL:-INFO}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Persistence settings
+      KC_CACHE_STACK: tcp
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
     ports:
       - '8080:8080'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     command: 
-      - start-dev --http-enabled=true
+      - start
+      - --http-enabled=true
       - --import-realm
+      - --db-pool-initial-size=1
+      - --db-pool-min-size=1
+      - --db-pool-max-size=5
     volumes:
       - ./keycloak/realms:/opt/keycloak/data/import
-
-  mail-init:
-    image: busybox
-    volumes:
-      - mailconfig:/config
-    environment:
-      - MAIL_ACCOUNTS=${MAIL_ACCOUNTS:-test@example.test|{PLAIN}testpass,noreply@example.test|{PLAIN}noreplypass}
-      - MAIL_ALIASES=${MAIL_ALIASES:-alias1@example.test test@example.test}
-    command: |
-      sh -c "
-        echo 'Creating mail configuration...'
-        
-        # Clear existing config
-        rm -f /config/postfix-accounts.cf /config/postfix-virtual.cf
-        
-        # Create accounts from environment variable
-        if [ ! -z \"$$MAIL_ACCOUNTS\" ]; then
-          echo \"$$MAIL_ACCOUNTS\" | tr ',' '\n' > /config/postfix-accounts.cf
-          echo 'Created accounts:'
-          cat /config/postfix-accounts.cf
-        fi
-        
-        # Create aliases from environment variable
-        if [ ! -z \"$$MAIL_ALIASES\" ]; then
-          echo \"$$MAIL_ALIASES\" | tr ',' '\n' > /config/postfix-virtual.cf
-          echo 'Created aliases:'
-          cat /config/postfix-virtual.cf
-        fi
-        
-        echo 'Mail configuration complete'
-      "
-
-  mailserver:
-    image: 'ghcr.io/docker-mailserver/docker-mailserver:latest'
-    container_name: mailserver
-    hostname: mail.example.test
-    domainname: example.test
-    ports:
-      - '25:25'      # SMTP
-      - '143:143'    # IMAP
-      - '587:587'    # Submission
-      - '465:465'    # Secure SMTP
-      - '993:993'    # Secure IMAP
-    volumes:
-      - maildata:/var/mail
-      - mailstate:/var/mail-state
-      - mailconfig:/tmp/docker-mailserver
-    environment:
-      - ENABLE_SPAMASSASSIN=0
-      - ENABLE_CLAMAV=0
-      - ENABLE_FAIL2BAN=0
-      - ENABLE_POSTGREY=0
-      - SSL_TYPE=
-      - PERMIT_DOCKER=network
-      - OVERRIDE_HOSTNAME=mail.example.test
-      - POSTMASTER_ADDRESS=postmaster@example.test
-      - POSTFIX_MESSAGE_SIZE_LIMIT=10240000
-      - ONE_DIR=1
-      - ENABLE_AMAVIS=0
-      - DMS_DEBUG=1
-    depends_on:
-      - mail-init
+      - keycloak_data:/opt/keycloak/data
     healthcheck:
-      test: [ "CMD", "ss", "-lntp", "|", "grep", ":25" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    cap_add:
-      - NET_ADMIN
-      - SYS_PTRACE
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/8080' && echo 'Keycloak is running'"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  # keycloak-init:
+  #   image: alpine:latest
+  #   depends_on:
+  #     keycloak:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./keycloak-init.sh:/opt/keycloak-init.sh
+  #     - ./keycloak/realms:/opt/keycloak/data/import
+  #   environment:
+  #     KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+  #     KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+  #     GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+  #     GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+  #   command: >
+  #     sh -c "
+  #       apk add --no-cache curl jq bash &&
+  #       bash /opt/keycloak-init.sh
+  #     "
+
+  # mail-init:
+  #   image: busybox
+  #   volumes:
+  #     - mailconfig:/config
+  #   environment:
+  #     - MAIL_ACCOUNTS=${MAIL_ACCOUNTS:-test@example.test|{PLAIN}testpass,noreply@example.test|{PLAIN}noreplypass}
+  #     - MAIL_ALIASES=${MAIL_ALIASES:-alias1@example.test test@example.test}
+  #   command: |
+  #     sh -c "
+  #       echo 'Creating mail configuration...'
+  #       
+  #       # Clear existing config
+  #       rm -f /config/postfix-accounts.cf /config/postfix-virtual.cf
+  #       
+  #       # Create accounts from environment variable
+  #       if [ ! -z \"$$MAIL_ACCOUNTS\" ]; then
+  #         echo \"$$MAIL_ACCOUNTS\" | tr ',' '\n' > /config/postfix-accounts.cf
+  #         echo 'Created accounts:'
+  #         cat /config/postfix-accounts.cf
+  #       fi
+  #       
+  #       # Create aliases from environment variable
+  #       if [ ! -z \"$$MAIL_ALIASES\" ]; then
+  #         echo \"$$MAIL_ALIASES\" | tr ',' '\n' > /config/postfix-virtual.cf
+  #         echo 'Created aliases:'
+  #         cat /config/postfix-virtual.cf
+  #       fi
+  #       
+  #       echo 'Mail configuration complete'
+  #     "
+
+  # mailserver:
+  #   image: 'ghcr.io/docker-mailserver/docker-mailserver:latest'
+  #   container_name: mailserver
+  #   hostname: mail.example.test
+  #   domainname: example.test
+  #   ports:
+  #     - '25:25'      # SMTP
+  #     - '143:143'    # IMAP
+  #     - '587:587'    # Submission
+  #     - '465:465'    # Secure SMTP
+  #     - '993:993'    # Secure IMAP
+  #   volumes:
+  #     - maildata:/var/mail
+  #     - mailstate:/var/mail-state
+  #     - mailconfig:/tmp/docker-mailserver
+  #   environment:
+  #     - ENABLE_SPAMASSASSIN=0
+  #     - ENABLE_CLAMAV=0
+  #     - ENABLE_FAIL2BAN=0
+  #     - ENABLE_POSTGREY=0
+  #     - SSL_TYPE=
+  #     - PERMIT_DOCKER=network
+  #     - OVERRIDE_HOSTNAME=mail.example.test
+  #     - POSTMASTER_ADDRESS=postmaster@example.test
+  #     - POSTFIX_MESSAGE_SIZE_LIMIT=10240000
+  #     - ONE_DIR=1
+  #     - ENABLE_AMAVIS=0
+  #     - DMS_DEBUG=1
+  #   depends_on:
+  #     - mail-init
+  #   healthcheck:
+  #     test: ["CMD", "sh", "-c", "ss -lntp | grep :25"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - SYS_PTRACE
 
   app:
     build:
@@ -114,12 +189,21 @@ services:
     ports:
       - '8888:8888'
     depends_on:
-      - postgres
-      - redis
-      - keycloak
-      - mailserver
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      # keycloak-init:
+      #   condition: service_completed_successfully
+    restart: on-failure
 
 volumes:
-  maildata:
-  mailstate:
-  mailconfig:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+  keycloak_data:
+  # maildata:
+  # mailstate:
+  # mailconfig:

@@ -9,8 +9,6 @@ import com.hungng3011.vdtecomberefresh.order.enums.PaymentMethod;
 import com.hungng3011.vdtecomberefresh.order.repositories.OrderRepository;
 import com.hungng3011.vdtecomberefresh.payment.config.ViettelPaymentConfig;
 import com.hungng3011.vdtecomberefresh.payment.dtos.viettel.*;
-import com.hungng3011.vdtecomberefresh.profile.services.ProfileService;
-import com.hungng3011.vdtecomberefresh.profile.dtos.ProfileDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,14 +44,10 @@ class ViettelPaymentServiceTest {
     @Mock
     private NotificationService notificationService;
 
-    @Mock
-    private ProfileService profileService;
-
     @InjectMocks
     private ViettelPaymentService viettelPaymentService;
 
     private Order testOrder;
-    private ProfileDto testProfile;
     private ViettelPaymentConfig.SettingsConfig configSettings;
 
     @BeforeEach
@@ -61,19 +55,13 @@ class ViettelPaymentServiceTest {
         // Setup test order
         testOrder = new Order();
         testOrder.setId("test-order-123");
-        testOrder.setUserId("550e8400-e29b-41d4-a716-446655440000");
+        testOrder.setUserEmail("test@example.com");
         testOrder.setTotalPrice(BigDecimal.valueOf(100.00));
         testOrder.setPhone("+84123456789");
         testOrder.setAddress("123 Test Street, Ho Chi Minh City");
         testOrder.setStatus(OrderStatus.PENDING_PAYMENT);
         testOrder.setCreatedAt(LocalDateTime.now());
         testOrder.setUpdatedAt(LocalDateTime.now());
-
-        // Setup test profile
-        testProfile = new ProfileDto();
-        testProfile.setUserId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        testProfile.setEmail("test@example.com");
-        testProfile.setFullName("Test User");
 
         // Setup config settings
         configSettings = new ViettelPaymentConfig.SettingsConfig();
@@ -165,8 +153,6 @@ class ViettelPaymentServiceTest {
     void updateOrderPaymentStatus_shouldSendPaymentSuccessEmail_whenPaymentSuccessful() {
         // Arrange
         when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
-        when(profileService.getProfile(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")))
-                .thenReturn(testProfile);
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
         doNothing().when(notificationService).sendPaymentSuccessEmail(anyString(), anyString(), anyString(), any(BigDecimal.class));
 
@@ -188,8 +174,6 @@ class ViettelPaymentServiceTest {
     void updateOrderPaymentStatus_shouldSendPaymentFailedEmail_whenPaymentFailed() {
         // Arrange
         when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
-        when(profileService.getProfile(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")))
-                .thenReturn(testProfile);
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
         doNothing().when(notificationService).sendPaymentFailedEmail(anyString(), anyString(), anyString(), anyString());
 
@@ -210,8 +194,8 @@ class ViettelPaymentServiceTest {
     @Test
     void updateOrderPaymentStatus_shouldNotSendEmail_whenProfileNotFound() {
         // Arrange
+        testOrder.setUserEmail(null); // No email address
         when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
-        when(profileService.getProfile(any(UUID.class))).thenThrow(new RuntimeException("Profile not found"));
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
 
         // Act
@@ -226,8 +210,6 @@ class ViettelPaymentServiceTest {
     void updateOrderPaymentStatus_shouldNotFailPayment_whenEmailFails() {
         // Arrange
         when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
-        when(profileService.getProfile(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")))
-                .thenReturn(testProfile);
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
         doThrow(new RuntimeException("Email service unavailable"))
                 .when(notificationService).sendPaymentSuccessEmail(anyString(), anyString(), anyString(), any(BigDecimal.class));
@@ -250,8 +232,6 @@ class ViettelPaymentServiceTest {
         ViettelRefundResponse mockResponse = createMockRefundResponse();
         when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
         when(viettelApiClient.refundTransaction(any(ViettelRefundRequest.class))).thenReturn(mockResponse);
-        when(profileService.getProfile(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")))
-                .thenReturn(testProfile);
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
         doNothing().when(notificationService).sendRefundConfirmationEmail(anyString(), anyString(), anyString(), any(BigDecimal.class));
 
@@ -312,13 +292,11 @@ class ViettelPaymentServiceTest {
     void processRefund_shouldNotSendEmail_whenEmailAddressEmpty() {
         // Arrange
         testOrder.setPaymentId("VT123456789");
-        testProfile.setEmail(""); // Empty email
+        testOrder.setUserEmail(""); // Empty email
         
         ViettelRefundResponse mockResponse = createMockRefundResponse();
         when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
         when(viettelApiClient.refundTransaction(any(ViettelRefundRequest.class))).thenReturn(mockResponse);
-        when(profileService.getProfile(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")))
-                .thenReturn(testProfile);
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
 
         // Act
@@ -395,23 +373,6 @@ class ViettelPaymentServiceTest {
         // Assert
         assertEquals("TEST", environment);
         verify(config, times(1)).getActiveEnvironment();
-    }
-
-    @Test
-    void updateOrderPaymentStatus_shouldHandleNullEmailGracefully() {
-        // Arrange
-        testProfile.setEmail(null);
-        when(orderRepository.findById("test-order-123")).thenReturn(Optional.of(testOrder));
-        when(profileService.getProfile(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")))
-                .thenReturn(testProfile);
-        when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
-
-        // Act
-        viettelPaymentService.updateOrderPaymentStatus("test-order-123", 1, "00", "VT123456789");
-
-        // Assert
-        verify(orderRepository, times(1)).save(any(Order.class));
-        verify(notificationService, never()).sendPaymentSuccessEmail(anyString(), anyString(), anyString(), any(BigDecimal.class));
     }
 
     @Test

@@ -2,11 +2,12 @@ package com.hungng3011.vdtecomberefresh.stock.mappers;
 
 import com.hungng3011.vdtecomberefresh.stock.dtos.StockDto;
 import com.hungng3011.vdtecomberefresh.stock.entities.Stock;
+import com.hungng3011.vdtecomberefresh.product.mappers.VariationMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", uses = {VariationMapper.class}, unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface StockMapper {
     StockDto toDto(Stock stock);
     

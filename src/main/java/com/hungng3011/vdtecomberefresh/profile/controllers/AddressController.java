@@ -4,6 +4,7 @@ import com.hungng3011.vdtecomberefresh.profile.models.District;
 import com.hungng3011.vdtecomberefresh.profile.models.Province;
 import com.hungng3011.vdtecomberefresh.profile.models.Ward;
 import com.hungng3011.vdtecomberefresh.profile.services.AddressService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/v1/address")
+@Slf4j
 public class AddressController {
 
     @Autowired
@@ -21,12 +23,28 @@ public class AddressController {
 
     @GetMapping("/provinces")
     public List<Province> getAllProvinces() {
-        return addressService.getAllProvinces();
+        log.info("Fetching all provinces");
+        try {
+            List<Province> provinces = addressService.getAllProvinces();
+            log.info("Successfully retrieved {} provinces", provinces.size());
+            return provinces;
+        } catch (Exception e) {
+            log.error("Error fetching provinces", e);
+            throw e;
+        }
     }
 
     @GetMapping("/provinces/{provinceCode}/districts")
     public List<District> getDistricts(@PathVariable int provinceCode) {
-        return addressService.getDistrictsByProvinceCode(provinceCode);
+        log.info("Fetching districts for province code: {}", provinceCode);
+        try {
+            List<District> districts = addressService.getDistrictsByProvinceCode(provinceCode);
+            log.info("Successfully retrieved {} districts for province code: {}", districts.size(), provinceCode);
+            return districts;
+        } catch (Exception e) {
+            log.error("Error fetching districts for province code: {}", provinceCode, e);
+            throw e;
+        }
     }
 
     @GetMapping("/districts/{districtCode}/wards")

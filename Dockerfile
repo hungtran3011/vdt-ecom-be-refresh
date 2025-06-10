@@ -14,6 +14,13 @@ RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+
+# Install curl for health checks and wait script
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/target/vdt-ecom-be-refresh-0.0.1-SNAPSHOT.jar app.jar
 COPY src/main/resources/* /app/src/main/resources/
-ENTRYPOINT ["java", "-jar", "app.jar"]
+COPY wait-for-keycloak.sh /app/
+RUN chmod +x /app/wait-for-keycloak.sh
+
+ENTRYPOINT ["/app/wait-for-keycloak.sh", "keycloak", "8080", "ecom", "java", "-jar", "app.jar"]

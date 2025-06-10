@@ -4,13 +4,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-
+import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
 import javax.net.ssl.SSLContext;
-import java.security.KeyStore;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 
 /**
  * Test Configuration to provide mock implementations of dependencies
@@ -35,8 +30,8 @@ public class TestConfig {
      */
     @Bean
     @ConditionalOnMissingBean(name = "tlsSocketStrategy")
-    public Object tlsSocketStrategyStub() {
-        // This is a stub bean just to satisfy dependency injection
-        return new Object();
+    public LayeredConnectionSocketFactory tlsSocketStrategyStub() {
+        // Return a mock implementation or use Mockito to create a stub
+        return org.mockito.Mockito.mock(LayeredConnectionSocketFactory.class);
     }
 }

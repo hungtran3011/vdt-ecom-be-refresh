@@ -31,17 +31,29 @@ build/
 
 ### VS Code ###
 .vscode/
-/.env
-/src/main/resources/media.properties
-/src/main/resources/security.properties
-/src/main/resources/db.yml
+
+### Environment and Security Files ###
+.env
+.env.local
+.env.production
+.env.staging
+*.properties
+*.yml
+!.env.example
+
+### Sensitive Configuration ###
 /src/main/resources/security.yml
+/src/main/resources/db.yml
 /src/main/resources/mail.yml
+/src/main/resources/viettel-payment.yml
+/src/main/resources/media.properties
+
+### Docker and Mail Data ###
 /docker-data/
 /mail-config/
 /mail-data/
 /mail-state/
+
+### Test Results ###
 "Test Results - vdtecomberefresh_in_vdt-ecom-be-refresh.html"
-src/main/resources/static/product.html
 Test Results - vdtecomberefresh_in_vdt-ecom-be-refresh.html
-src/main/resources/viettel-payment.yml

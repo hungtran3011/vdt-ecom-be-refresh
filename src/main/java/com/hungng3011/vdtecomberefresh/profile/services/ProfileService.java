@@ -1,23 +1,27 @@
 package com.hungng3011.vdtecomberefresh.profile.services;
 
+import com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse;
 import com.hungng3011.vdtecomberefresh.profile.dtos.ProfileDto;
 import com.hungng3011.vdtecomberefresh.profile.entities.Profile;
 import com.hungng3011.vdtecomberefresh.profile.mappers.ProfileMapper;
 import com.hungng3011.vdtecomberefresh.profile.repository.ProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ProfileService {
-
-    private static final Logger log = LoggerFactory.getLogger(ProfileService.class);
 
     @Autowired
     private ProfileRepository repository;
@@ -26,34 +30,52 @@ public class ProfileService {
     private ProfileMapper mapper;
 
     public ProfileDto getProfile(UUID userId) {
-        Profile profile = repository.findProfileByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Profile not found for user ID: " + userId));
-        return mapper.toDto(profile);
+        try {
+            log.info("Retrieving profile for user id: {}", userId);
+            Profile profile = repository.findProfileByUserId(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("Profile not found for user ID: " + userId));
+            log.info("Successfully retrieved profile for user id: {}", userId);
+            return mapper.toDto(profile);
+        } catch (EntityNotFoundException e) {
+            log.warn("Profile not found for user id: {}", userId);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error retrieving profile for user id: {}", userId, e);
+            throw e;
+        }
     }
 
     @Transactional
     public ProfileDto createOrUpdate(ProfileDto dto) {
-        Profile profile = repository.findProfileByUserId(dto.getUserId())
-                .orElse(new Profile()); // If not found, creates a new Profile instance
+        try {
+            log.info("Creating or updating profile for user id: {}", dto.getUserId());
+            Profile profile = repository.findProfileByUserId(dto.getUserId())
+                    .orElse(new Profile()); // If not found, creates a new Profile instance
 
-        // Map DTO to entity. If profile is new, all fields will be set from DTO.
-        // If profile exists, this creates a new entity 'entityToSave' with DTO data.
-        Profile entityToSave = mapper.toEntity(dto);
+            // Map DTO to entity. If profile is new, all fields will be set from DTO.
+            // If profile exists, this creates a new entity 'entityToSave' with DTO data.
+            Profile entityToSave = mapper.toEntity(dto);
 
-        if (profile.getId() != null) { // If profile was found in DB (i.e., it's an existing profile)
-            entityToSave.setId(profile.getId()); // Set the ID to ensure an update, not insert
+            if (profile.getId() != null) { // If profile was found in DB (i.e., it's an existing profile)
+                entityToSave.setId(profile.getId()); // Set the ID to ensure an update, not insert
+                log.info("Updating existing profile with id: {} for user: {}", profile.getId(), dto.getUserId());
+            } else {
+                log.info("Creating new profile for user id: {}", dto.getUserId());
+            }
+            
+            // Ensure userId is set, especially if it's a new profile from DTO
+            if (entityToSave.getUserId() == null && dto.getUserId() != null) {
+                entityToSave.setUserId(dto.getUserId());
+            }
+
+            Profile saved = repository.save(entityToSave);
+            log.info("Successfully {} profile for user id: {}", 
+                    profile.getId() != null ? "updated" : "created", dto.getUserId());
+            return mapper.updateEntityFromDto(saved);
+        } catch (Exception e) {
+            log.error("Error creating or updating profile for user id: {}", dto.getUserId(), e);
+            throw e;
         }
-        // If profile was not found, profile.getId() is null.
-        // entityToSave.getId() is also null (assuming DTO doesn't map an ID or it's null).
-        // So, it will be an insert. userId must be set from DTO.
-        // Ensure userId is set, especially if it's a new profile from DTO
-        if (entityToSave.getUserId() == null && dto.getUserId() != null) {
-            entityToSave.setUserId(dto.getUserId());
-        }
-
-
-        Profile saved = repository.save(entityToSave);
-        return mapper.updateEntityFromDto(saved);
     }
 
     /**
@@ -100,5 +122,116 @@ public class ProfileService {
         Profile saved = repository.save(profile);
         log.info("Profile synced/updated for userId: {}", userId);
         return mapper.toDto(saved);
+    }
+
+    public PagedResponse<ProfileDto> getAllWithPagination(Long cursor, int limit) {
+        try {
+            log.info("Retrieving profiles with cursor: {} and limit: {}", cursor, limit);
+            
+            Pageable pageable = PageRequest.of(0, limit);
+            List<Profile> profiles;
+            
+            if (cursor == null) {
+                profiles = repository.findAllWithoutCursor(pageable);
+            } else {
+                profiles = repository.findAllWithCursorAfter(cursor, pageable);
+            }
+            
+            List<ProfileDto> profileDtos = profiles.stream()
+                    .map(mapper::toDto)
+                    .collect(Collectors.toList());
+            
+            Long nextCursor = null;
+            if (!profiles.isEmpty() && profiles.size() == limit) {
+                nextCursor = profiles.get(profiles.size() - 1).getId();
+            }
+            
+            long totalElements = repository.countAllProfiles();
+            int totalPages = (int) Math.ceil((double) totalElements / limit);
+            
+            PagedResponse.PaginationMetadata metadata = PagedResponse.PaginationMetadata.builder()
+                    .page(0)
+                    .size(limit)
+                    .totalElements(totalElements)
+                    .totalPages(totalPages)
+                    .hasNext(nextCursor != null)
+                    .hasPrevious(cursor != null)
+                    .nextCursor(nextCursor)
+                    .previousCursor(cursor)
+                    .build();
+            
+            log.info("Successfully retrieved {} profiles", profileDtos.size());
+            return PagedResponse.<ProfileDto>builder()
+                    .content(profileDtos)
+                    .pagination(metadata)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error retrieving profiles with pagination", e);
+            throw e;
+        }
+    }
+
+    public PagedResponse<ProfileDto> getAllWithPreviousCursor(Long cursor, int limit) {
+        try {
+            log.info("Retrieving profiles with previous cursor: {} and limit: {}", cursor, limit);
+            
+            if (cursor == null) {
+                log.warn("Previous cursor is null, returning empty result");
+                PagedResponse.PaginationMetadata emptyMetadata = PagedResponse.PaginationMetadata.builder()
+                        .page(0)
+                        .size(limit)
+                        .totalElements(0)
+                        .totalPages(0)
+                        .hasNext(false)
+                        .hasPrevious(false)
+                        .nextCursor(null)
+                        .previousCursor(null)
+                        .build();
+                        
+                return PagedResponse.<ProfileDto>builder()
+                        .content(Collections.emptyList())
+                        .pagination(emptyMetadata)
+                        .build();
+            }
+            
+            Pageable pageable = PageRequest.of(0, limit);
+            List<Profile> profiles = repository.findAllWithCursorBefore(cursor, pageable);
+            
+            // Reverse the order since we queried in DESC order
+            Collections.reverse(profiles);
+            
+            List<ProfileDto> profileDtos = profiles.stream()
+                    .map(mapper::toDto)
+                    .collect(Collectors.toList());
+            
+            Long nextCursor = cursor;
+            Long previousCursor = null;
+            if (!profiles.isEmpty()) {
+                previousCursor = profiles.get(0).getId();
+            }
+            
+            long totalElements = repository.countAllProfiles();
+            int totalPages = (int) Math.ceil((double) totalElements / limit);
+            
+            PagedResponse.PaginationMetadata metadata = PagedResponse.PaginationMetadata.builder()
+                    .page(Math.max(0, 0 - 1))
+                    .size(limit)
+                    .totalElements(totalElements)
+                    .totalPages(totalPages)
+                    .hasNext(true)
+                    .hasPrevious(!profiles.isEmpty() && profiles.size() == limit)
+                    .nextCursor(nextCursor)
+                    .previousCursor(previousCursor)
+                    .build();
+            
+            log.info("Successfully retrieved {} profiles with previous cursor", profileDtos.size());
+            return PagedResponse.<ProfileDto>builder()
+                    .content(profileDtos)
+                    .pagination(metadata)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error retrieving profiles with previous cursor", e);
+            throw e;
+        }
     }
 }

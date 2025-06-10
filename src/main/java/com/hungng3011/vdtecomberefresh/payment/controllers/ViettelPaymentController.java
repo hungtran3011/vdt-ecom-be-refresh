@@ -21,7 +21,7 @@ import java.util.Optional;
  * These endpoints are called by the frontend application
  */
 @RestController
-@RequestMapping("/api/payment/viettel")
+@RequestMapping("/v1/payment/viettel")
 @RequiredArgsConstructor
 @Slf4j
 public class ViettelPaymentController {

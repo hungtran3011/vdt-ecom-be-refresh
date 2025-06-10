@@ -161,4 +161,98 @@ public class ProfileControllerTest {
                 .with(jwt().jwt(mockJwt)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void getAllProfiles_ShouldReturnPagedResponse_WhenSuccessful() throws Exception {
+        // Create mock paginated response
+        com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse<ProfileDto> mockResponse = 
+            com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse.<ProfileDto>builder()
+                .content(java.util.Arrays.asList(profileDto))
+                .pagination(com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse.PaginationMetadata.builder()
+                    .page(0)
+                    .size(10)
+                    .totalElements(1)
+                    .totalPages(1)
+                    .hasNext(false)
+                    .hasPrevious(false)
+                    .nextCursor(null)
+                    .previousCursor(null)
+                    .build())
+                .build();
+        
+        when(profileService.getAllWithPagination(null, 10)).thenReturn(mockResponse);
+        
+        mockMvc.perform(get("/v1/profiles")
+                .param("limit", "10")
+                .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_profile"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].userId").value(profileDto.getUserId().toString()))
+                .andExpect(jsonPath("$.pagination.page").value(0))
+                .andExpect(jsonPath("$.pagination.size").value(10))
+                .andExpect(jsonPath("$.pagination.totalElements").value(1))
+                .andExpect(jsonPath("$.pagination.hasNext").value(false))
+                .andExpect(jsonPath("$.pagination.hasPrevious").value(false));
+    }
+
+    @Test
+    void getAllProfiles_ShouldReturnPagedResponse_WithCursor() throws Exception {
+        // Create mock paginated response with cursor
+        com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse<ProfileDto> mockResponse = 
+            com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse.<ProfileDto>builder()
+                .content(java.util.Arrays.asList(profileDto))
+                .pagination(com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse.PaginationMetadata.builder()
+                    .page(0)
+                    .size(5)
+                    .totalElements(10)
+                    .totalPages(2)
+                    .hasNext(true)
+                    .hasPrevious(false)
+                    .nextCursor(123L)
+                    .previousCursor(null)
+                    .build())
+                .build();
+        
+        when(profileService.getAllWithPagination(null, 5)).thenReturn(mockResponse);
+        
+        mockMvc.perform(get("/v1/profiles")
+                .param("limit", "5")
+                .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_profile"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].userId").value(profileDto.getUserId().toString()))
+                .andExpect(jsonPath("$.pagination.hasNext").value(true))
+                .andExpect(jsonPath("$.pagination.nextCursor").value(123));
+    }
+
+    @Test
+    void getAllProfiles_ShouldReturnPagedResponse_WithPreviousCursor() throws Exception {
+        // Create mock paginated response for previous page
+        com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse<ProfileDto> mockResponse = 
+            com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse.<ProfileDto>builder()
+                .content(java.util.Arrays.asList(profileDto))
+                .pagination(com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse.PaginationMetadata.builder()
+                    .page(0)
+                    .size(5)
+                    .totalElements(10)
+                    .totalPages(2)
+                    .hasNext(true)
+                    .hasPrevious(true)
+                    .nextCursor(456L)
+                    .previousCursor(123L)
+                    .build())
+                .build();
+        
+        when(profileService.getAllWithPreviousCursor(456L, 5)).thenReturn(mockResponse);
+        
+        mockMvc.perform(get("/v1/profiles")
+                .param("cursor", "456")
+                .param("limit", "5")
+                .param("previous", "true")
+                .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_profile"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.pagination.hasPrevious").value(true))
+                .andExpect(jsonPath("$.pagination.previousCursor").value(123));
+    }
 }

@@ -6,6 +6,8 @@ import com.hungng3011.vdtecomberefresh.order.entities.Order;
 import com.hungng3011.vdtecomberefresh.order.entities.OrderItem;
 import com.hungng3011.vdtecomberefresh.order.mappers.OrderMapper;
 import com.hungng3011.vdtecomberefresh.order.repositories.OrderRepository;
+import com.hungng3011.vdtecomberefresh.product.entities.Product;
+import com.hungng3011.vdtecomberefresh.product.repositories.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +35,9 @@ class OrderServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
+    private ProductRepository productRepository;
+
+    @Mock
     private OrderMapper orderMapper;
 
     @InjectMocks
@@ -47,9 +53,15 @@ class OrderServiceTest {
         String orderId = UUID.randomUUID().toString();
         LocalDateTime currentTime = LocalDateTime.now();
 
+        // Create a mock product
+        Product product = new Product();
+        product.setId(10L);
+        product.setName("Test Product");
+        product.setImages(Arrays.asList("test-image.jpg"));
+
         orderItem = new OrderItem();
         orderItem.setId(1L);
-        orderItem.setProductId(10L);
+        orderItem.setProduct(product);
         // orderItem.setOrder(order); // This would be set if OrderItem has Order reference
 
         orderItemDto = new OrderItemDto();
@@ -58,7 +70,7 @@ class OrderServiceTest {
 
         order = new Order();
         order.setId(orderId);
-        order.setUserId("user123");
+        order.setUserEmail("user123@example.com");
         order.setCreatedAt(currentTime); // Order entity expects String
         order.setUpdatedAt(currentTime); // Order entity expects String
         order.setItems(Collections.singletonList(orderItem));
@@ -66,7 +78,7 @@ class OrderServiceTest {
 
         orderDto = new OrderDto();
         orderDto.setId(orderId);
-        orderDto.setUserId("user123");
+        orderDto.setUserEmail("user123@example.com");
         orderDto.setCreatedAt(currentTime); // OrderDto expects LocalDateTime
         orderDto.setUpdatedAt(currentTime); // OrderDto expects LocalDateTime
         orderDto.setItems(Collections.singletonList(orderItemDto));
@@ -74,12 +86,20 @@ class OrderServiceTest {
 
     @Test
     void createOrder_shouldSaveAndReturnOrderDto() {
+        // Create a mock product
+        Product product = new Product();
+        product.setId(10L);
+        product.setName("Test Product");
+        product.setImages(Arrays.asList("test-image.jpg"));
+
         // Mocking the state before ID and timestamps are set by the service
         Order orderToSave = new Order();
-        orderToSave.setUserId("user123");
+        orderToSave.setUserEmail("user123@example.com");
         OrderItem itemToSave = new OrderItem();
-        itemToSave.setProductId(10L);
+        itemToSave.setProduct(product);
         orderToSave.setItems(Collections.singletonList(itemToSave));
+
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
 
 
         when(orderMapper.toEntity(any(OrderDto.class))).thenReturn(orderToSave);
@@ -103,7 +123,7 @@ class OrderServiceTest {
         assertNotNull(createdOrderDto.getId());
         assertNotNull(createdOrderDto.getCreatedAt());
         assertNotNull(createdOrderDto.getUpdatedAt());
-        assertEquals(this.orderDto.getUserId(), createdOrderDto.getUserId());
+        assertEquals(this.orderDto.getUserEmail(), createdOrderDto.getUserEmail());
         assertFalse(createdOrderDto.getItems().isEmpty());
 
         verify(orderMapper, times(1)).toEntity(any(OrderDto.class));

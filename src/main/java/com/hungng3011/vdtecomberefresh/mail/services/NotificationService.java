@@ -37,7 +37,7 @@ public class NotificationService {
                 .template(mailConfig.getTemplates().get("order-confirmation"))
                 .variables(variables)
                 .orderId(order.getId())
-                .userId(order.getUserId())
+                .userId(order.getUserEmail()) // Using email as user identifier
                 .type(EmailNotificationDto.EmailType.ORDER_CONFIRMATION)
                 .textContent(createOrderConfirmationText(order))
                 .build();
@@ -191,6 +191,32 @@ public class NotificationService {
         }
     }
     
+    public void sendOrderCancellationEmail(String orderId, String customerEmail) {
+        log.info("Sending order cancellation email for order: {} to: {}", orderId, customerEmail);
+        
+        String subject = processSubjectTemplate(mailConfig.getSubjects().get("order-cancellation"), orderId);
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("customerName", extractCustomerName(customerEmail));
+        variables.put("cancellationDate", java.time.LocalDateTime.now());
+        
+        EmailNotificationDto emailDto = EmailNotificationDto.builder()
+                .to(customerEmail)
+                .subject(subject)
+                .template(mailConfig.getTemplates().get("order-cancellation"))
+                .variables(variables)
+                .orderId(orderId)
+                .type(EmailNotificationDto.EmailType.GENERAL_NOTIFICATION)
+                .textContent(createOrderCancellationText(orderId))
+                .build();
+        
+        if (mailConfig.isAsync()) {
+            emailService.sendEmailAsync(emailDto);
+        } else {
+            emailService.sendEmailSync(emailDto);
+        }
+    }
+
     private String processSubjectTemplate(String template, String orderId) {
         if (template != null) {
             return template.replace("#{orderId}", orderId);
@@ -280,6 +306,17 @@ public class NotificationService {
         text.append("Your order has been delivered successfully!\n\n");
         text.append("Order ID: ").append(orderId).append("\n\n");
         text.append("We hope you enjoy your purchase. Please let us know if you have any feedback!\n\n");
+        text.append("Best regards,\n");
+        text.append("VDT E-Commerce Team");
+        return text.toString();
+    }
+
+    private String createOrderCancellationText(String orderId) {
+        StringBuilder text = new StringBuilder();
+        text.append("Dear Customer,\n\n");
+        text.append("We regret to inform you that your order has been cancelled.\n\n");
+        text.append("Order ID: ").append(orderId).append("\n\n");
+        text.append("If you have any questions or need further assistance, please contact our support team.\n\n");
         text.append("Best regards,\n");
         text.append("VDT E-Commerce Team");
         return text.toString();

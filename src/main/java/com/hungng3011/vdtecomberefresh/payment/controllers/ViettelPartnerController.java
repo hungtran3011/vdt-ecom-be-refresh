@@ -26,7 +26,7 @@ import org.springframework.web.util.HtmlUtils;
  * These endpoints are called by Viettel's system
  */
 @RestController
-@RequestMapping("/api/viettel/partner")
+@RequestMapping("/v1/viettel/partner")
 @RequiredArgsConstructor
 @Slf4j
 public class ViettelPartnerController {

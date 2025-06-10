@@ -135,7 +135,13 @@ public class UserManagementService {
             log.info("User updated successfully: {}", userId);
             
             // Synchronize changes with the profile database
-            authProfileService.updateProfileFromKeycloakUser(userId, email, firstName, lastName);
+            UserRepresentation updatedUser = userResource.toRepresentation();
+            authProfileService.updateProfileFromKeycloakUser(
+                userId, 
+                updatedUser.getEmail(), 
+                updatedUser.getFirstName(), 
+                updatedUser.getLastName()
+            );
         } catch (Exception e) {
             log.error("Error updating user: {}", userId, e);
             throw new ProfileProcessingException(

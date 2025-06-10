@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.HttpStatus;
@@ -61,7 +62,7 @@ public class AuthController {
             "lastName", jwt.getClaimAsString("family_name"),
             "roles", jwt.getClaimAsStringList("realm_access.roles")
         );
-        
+        // log.info););
         return ResponseEntity.ok(userInfo);
     }
 

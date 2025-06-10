@@ -10,8 +10,8 @@ public class CloudinaryConfig {
     @Bean
     public Cloudinary cloudinary() {
         return new Cloudinary(
-                //System.getenv("CLOUDINARY_URL")
-                "cloudinary://285633991747994:WNwV7cYwbo-3kHjef_GPfBuETdM@ddbrhoqrn"
+                System.getenv("CLOUDINARY_URL")
+                // "cloudinary://285633991747994:WNwV7cYwbo-3kHjef_GPfBuETdM@ddbrhoqrn"
         );
     }
 }

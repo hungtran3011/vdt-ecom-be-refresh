@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderDto {
     private String id;
-    private String userId; // Matches Keycloak user ID
+    private String userEmail; // User email from Keycloak token
     private OrderStatus status;
     private String address;
     private String phone;

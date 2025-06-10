@@ -63,7 +63,7 @@ class OrderControllerTest {
         orderId = UUID.randomUUID().toString();
         orderDto = new OrderDto();
         orderDto.setId(orderId);
-        orderDto.setUserId("user123");
+        orderDto.setUserEmail("user123@example.com");
         orderDto.setCreatedAt(LocalDateTime.now());
         orderDto.setItems(Collections.emptyList());
     }
@@ -77,7 +77,7 @@ class OrderControllerTest {
                         .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(orderId))
-                .andExpect(jsonPath("$.userId").value("user123"));
+                .andExpect(jsonPath("$.userEmail").value("user123@example.com"));
     }
 
     @Test
@@ -103,7 +103,7 @@ class OrderControllerTest {
     void updateOrder_shouldReturnUpdatedOrder() throws Exception {
         OrderDto updatedOrderDto = new OrderDto();
         updatedOrderDto.setId(orderId);
-        updatedOrderDto.setUserId("user123");
+        updatedOrderDto.setUserEmail("user123@example.com");
         updatedOrderDto.setAddress("New Address");
         updatedOrderDto.setItems(Collections.emptyList());
 

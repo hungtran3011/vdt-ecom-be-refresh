@@ -18,8 +18,6 @@ import com.hungng3011.vdtecomberefresh.payment.dtos.viettel.ViettelRefundRespons
 import com.hungng3011.vdtecomberefresh.payment.dtos.viettel.ViettelQueryTransactionRequest;
 import com.hungng3011.vdtecomberefresh.payment.dtos.viettel.ViettelQueryTransactionResponse;
 import com.hungng3011.vdtecomberefresh.payment.utils.PaymentStatusUtils;
-import com.hungng3011.vdtecomberefresh.profile.services.ProfileService;
-import com.hungng3011.vdtecomberefresh.profile.dtos.ProfileDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -66,24 +64,6 @@ public class ViettelPaymentService {
     private final ViettelPaymentConfig config;
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
-    private final ProfileService profileService;
-    
-    /**
-     * Phương thức hỗ trợ lấy địa chỉ email của khách hàng từ hồ sơ
-     * 
-     * @param userId ID của người dùng cần lấy thông tin
-     * @return Địa chỉ email của người dùng, hoặc null nếu không tìm thấy
-     */
-    private String getCustomerEmail(String userId) {
-        try {
-            UUID userUuid = UUID.fromString(userId);
-            ProfileDto profile = profileService.getProfile(userUuid);
-            return profile.getEmail();
-        } catch (Exception e) {
-            log.warn("Failed to get customer email for userId: {}", userId, e);
-            return null;
-        }
-    }
     
     /**
      * Khởi tạo thanh toán cho đơn hàng sử dụng Viettel Money.
@@ -157,6 +137,17 @@ public class ViettelPaymentService {
             if (!"SUCCESS".equals(response.getStatus()) && !"00".equals(response.getStatus())) {
                 log.error("Failed to create transaction with Viettel. OrderId: {}, Status: {}, Message: {}", 
                         orderId, response.getStatus(), response.getMessage());
+                
+                // Delete the order when payment initialization fails
+                try {
+                    log.info("Deleting order {} due to payment initialization failure", orderId);
+                    orderRepository.deleteById(orderId);
+                    log.info("Order {} successfully deleted after payment initialization failure", orderId);
+                } catch (Exception deleteException) {
+                    log.error("Failed to delete order {} after payment initialization failure", orderId, deleteException);
+                    // Continue with the original exception
+                }
+                
                 throw new PaymentGatewayException("Failed to create transaction with Viettel: " + response.getMessage());
             }
             
@@ -172,8 +163,26 @@ public class ViettelPaymentService {
             
             return response;
             
+        } catch (PaymentGatewayException e) {
+            // Re-throw payment gateway exceptions (order deletion already handled above)
+            throw e;
+        } catch (EntityNotFoundException | InvalidOrderStateException e) {
+            // These are validation exceptions, don't delete the order
+            log.error("Validation error for payment initiation. OrderId: {}", orderId, e);
+            throw new PaymentProcessingException("Failed to initiate payment for order: " + orderId, e);
         } catch (Exception e) {
-            log.error("Error initiating payment for order: {}", orderId, e);
+            log.error("Unexpected error initiating payment for order: {}", orderId, e);
+            
+            // Delete the order when unexpected error occurs during payment initialization
+            try {
+                log.info("Deleting order {} due to unexpected payment initialization error", orderId);
+                orderRepository.deleteById(orderId);
+                log.info("Order {} successfully deleted after unexpected payment initialization error", orderId);
+            } catch (Exception deleteException) {
+                log.error("Failed to delete order {} after unexpected payment initialization error", orderId, deleteException);
+                // Continue with the original exception
+            }
+            
             throw new PaymentProcessingException("Failed to initiate payment for order: " + orderId, e);
         }
     }
@@ -244,7 +253,7 @@ public class ViettelPaymentService {
                 
                 // Send refund confirmation email
                 try {
-                    String customerEmail = getCustomerEmail(order.getUserId());
+                    String customerEmail = order.getUserEmail(); // Use email directly from order
                     if (customerEmail != null && !customerEmail.trim().isEmpty()) {
                         log.info("Sending refund confirmation email for order: {}", orderId);
                         BigDecimal refundAmountDecimal = new BigDecimal(refundAmount).divide(new BigDecimal(100));
@@ -256,7 +265,7 @@ public class ViettelPaymentService {
                         );
                     } else {
                         log.warn("No email address found for user: {}, skipping refund confirmation email for order: {}", 
-                                order.getUserId(), orderId);
+                                order.getUserEmail(), orderId);
                     }
                 } catch (Exception e) {
                     log.error("Failed to send refund confirmation email for order: {}", orderId, e);
@@ -352,7 +361,7 @@ public class ViettelPaymentService {
                 
                 // Send payment success email
                 try {
-                    String customerEmail = getCustomerEmail(order.getUserId());
+                    String customerEmail = order.getUserEmail(); // Use email directly from order
                     if (customerEmail != null && !customerEmail.trim().isEmpty()) {
                         log.info("Sending payment success email for order: {}", orderId);
                         BigDecimal totalAmount = order.getTotalPrice();
@@ -364,7 +373,7 @@ public class ViettelPaymentService {
                         );
                     } else {
                         log.warn("No email address found for user: {}, skipping payment success email for order: {}", 
-                                order.getUserId(), orderId);
+                                order.getUserEmail(), orderId);
                     }
                 } catch (Exception e) {
                     log.error("Failed to send payment success email for order: {}", orderId, e);
@@ -379,7 +388,7 @@ public class ViettelPaymentService {
                 
                 // Send payment failure email
                 try {
-                    String customerEmail = getCustomerEmail(order.getUserId());
+                    String customerEmail = order.getUserEmail(); // Use email directly from order
                     if (customerEmail != null && !customerEmail.trim().isEmpty()) {
                         log.info("Sending payment failed email for order: {}", orderId);
                         String errorMessage = "Payment processing failed with error code: " + errorCode;
@@ -391,7 +400,7 @@ public class ViettelPaymentService {
                         );
                     } else {
                         log.warn("No email address found for user: {}, skipping payment failed email for order: {}", 
-                                order.getUserId(), orderId);
+                                order.getUserEmail(), orderId);
                     }
                 } catch (Exception e) {
                     log.error("Failed to send payment failed email for order: {}", orderId, e);
@@ -400,6 +409,17 @@ public class ViettelPaymentService {
                 
                 log.warn("Order payment failed. OrderId: {}, Status: {}, ErrorCode: {}", 
                         orderId, transactionStatus, errorCode);
+                
+                // Delete the order when payment fails
+                try {
+                    log.info("Deleting order {} due to payment failure", orderId);
+                    orderRepository.deleteById(orderId);
+                    log.info("Order {} successfully deleted after payment failure", orderId);
+                    return; // Exit early since order is deleted
+                } catch (Exception deleteException) {
+                    log.error("Failed to delete order {} after payment failure, keeping order in failed state", orderId, deleteException);
+                    // Continue to save the order in failed state if deletion fails
+                }
             }
             
             if (vtRequestId != null) {

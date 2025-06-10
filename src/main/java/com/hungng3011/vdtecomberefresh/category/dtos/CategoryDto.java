@@ -11,5 +11,8 @@ public class CategoryDto {
     private String name;
     private List<CategoryDynamicFieldDto> dynamicFields;
     private String imageUrl;
+    
+    // Product count - calculated field, ignored by entities
+    private Long productCount = 0L;
 }
 
