@@ -46,6 +46,10 @@ public class ProfileService {
     }
 
     public ProfileDto getProfileByEmail(String email) {
+     if (email == null || email.isBlank()) {
+         throw new IllegalArgumentException("Email must be provided");
+     }
+     String normalised = email.trim().toLowerCase();
         try {
             log.info("Retrieving profile for email: {}", email);
             Profile profile = repository.findProfileByEmail(email)

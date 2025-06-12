@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.hc.core5.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -243,8 +245,8 @@ public class ProductSearchController {
             
         } catch (Exception e) {
             log.error("Failed to log search result click", e);
-            return ResponseEntity.ok().build(); // Don't fail the request for analytics
-        }
+            return ResponseEntity.status(HttpStatus.SC_ACCEPTED).build(); // signal partial failure
+         }
     }
     
     /**
