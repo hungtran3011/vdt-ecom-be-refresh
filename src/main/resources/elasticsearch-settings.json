@@ -1,0 +1,48 @@
+{
+  "index": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "max_result_window": 50000,
+    "analysis": {
+      "analyzer": {
+        "autocomplete": {
+          "tokenizer": "autocomplete",
+          "filter": [
+            "lowercase"
+          ]
+        },
+        "autocomplete_search": {
+          "tokenizer": "lowercase"
+        },
+        "synonym": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "synonym"
+          ]
+        }
+      },
+      "tokenizer": {
+        "autocomplete": {
+          "type": "edge_ngram",
+          "min_gram": 2,
+          "max_gram": 10,
+          "token_chars": [
+            "letter"
+          ]
+        }
+      },
+      "filter": {
+        "synonym": {
+          "type": "synonym",
+          "synonyms": [
+            "laptop,notebook,computer",
+            "phone,mobile,smartphone",
+            "tv,television",
+            "headphones,earphones"
+          ]
+        }
+      }
+    }
+  }
+}

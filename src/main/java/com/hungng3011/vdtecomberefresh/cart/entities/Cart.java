@@ -17,11 +17,14 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column
     private String sessionId;
 
     @Column
     private Long userId;
+
+    @Column
+    private String userEmail;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

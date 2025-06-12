@@ -33,3 +33,12 @@ logging:
     name: logs/ecom-app.log
     max-size: 10MB
     max-history: 30
+
+# Elasticsearch Configuration for Full-Text Search
+elasticsearch:
+  host: ${ELASTICSEARCH_HOST:elasticsearch}
+  port: ${ELASTICSEARCH_PORT:9200}
+  username: ${ELASTICSEARCH_USERNAME:}
+  password: ${ELASTICSEARCH_PASSWORD:}
+  use-ssl: ${ELASTICSEARCH_USE_SSL:false}
+  timeout: 30s

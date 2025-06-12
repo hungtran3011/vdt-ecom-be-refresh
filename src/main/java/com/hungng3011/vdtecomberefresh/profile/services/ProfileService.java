@@ -45,6 +45,22 @@ public class ProfileService {
         }
     }
 
+    public ProfileDto getProfileByEmail(String email) {
+        try {
+            log.info("Retrieving profile for email: {}", email);
+            Profile profile = repository.findProfileByEmail(email)
+                    .orElseThrow(() -> new EntityNotFoundException("Profile not found for email: " + email));
+            log.info("Successfully retrieved profile for email: {}", email);
+            return mapper.toDto(profile);
+        } catch (EntityNotFoundException e) {
+            log.warn("Profile not found for email: {}", email);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error retrieving profile for email: {}", email, e);
+            throw e;
+        }
+    }
+
     @Transactional
     public ProfileDto createOrUpdate(ProfileDto dto) {
         try {

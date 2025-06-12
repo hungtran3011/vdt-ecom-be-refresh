@@ -7,8 +7,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -49,14 +52,27 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Column(unique = true)
+    private String sku;
+
     private String description;
+
+    @Column(columnDefinition = "TEXT")
+    private String metaDescription;
 
     @Column(nullable = false)
     private BigDecimal basePrice;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @Column(columnDefinition = "jsonb")
     @Type(JsonBinaryType.class)
-
     private List<String> images; // List of image URLs
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)

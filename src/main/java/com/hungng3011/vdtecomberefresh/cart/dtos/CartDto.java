@@ -14,6 +14,7 @@ import java.util.List;
 public class CartDto {
     private Long id;
     private Long userId;
+    private String userEmail;
     private List<CartItemDto> items;
     private BigDecimal totalPrice;
     private LocalDateTime lastUpdated;

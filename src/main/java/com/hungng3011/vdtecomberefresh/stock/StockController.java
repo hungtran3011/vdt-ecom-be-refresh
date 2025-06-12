@@ -10,11 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("v1/stock")
+@RequestMapping("/v1/stock")
 @RequiredArgsConstructor
 @Slf4j
 public class StockController {
@@ -250,24 +251,45 @@ public class StockController {
     }
     
     /**
-     * Validate stock for specific variation combination and quantity
+     * Simple stock validation for product without variations - matches frontend expectation
      * Endpoint: POST /v1/stock/product/{productId}/validate
      */
     @PostMapping("/product/{productId}/validate")
-    public ResponseEntity<Boolean> validateStock(
+    public ResponseEntity<Map<String, Object>> validateProductStock(
             @PathVariable Long productId,
-            @RequestParam List<Long> variationIds,
-            @RequestParam Integer quantity) {
-        log.info("Validating stock for product {} with variations {} and quantity {}", productId, variationIds, quantity);
+            @RequestBody Map<String, Integer> request) {
+        Integer quantity = request.get("quantity");
+        log.info("Validating stock for product {} with quantity {}", productId, quantity);
         try {
-            boolean valid = stockService.validateStockForVariationCombination(productId, variationIds, quantity);
-            log.info("Stock validation result: {} for product {} with variations {} and quantity {}", 
-                    valid, productId, variationIds, quantity);
-            return ResponseEntity.ok(valid);
+            // Get stock for product
+            List<StockDto> stocks = stockService.getByProductId(productId);
+            
+            Map<String, Object> response = new HashMap<>();
+            
+            if (stocks.isEmpty()) {
+                response.put("available", false);
+                response.put("availableQuantity", 0);
+                response.put("message", "No stock found for this product");
+            } else {
+                StockDto stock = stocks.get(0); // Get first stock item
+                boolean available = stock.getQuantity() >= quantity;
+                response.put("available", available);
+                response.put("availableQuantity", stock.getQuantity());
+                if (!available) {
+                    response.put("message", "Insufficient stock. Available: " + stock.getQuantity() + ", Requested: " + quantity);
+                }
+            }
+            
+            log.info("Stock validation result: {} for product {} with quantity {}", 
+                    response.get("available"), productId, quantity);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error validating stock for product {} with variations {} and quantity {}", 
-                    productId, variationIds, quantity, e);
-            throw e;
+            log.error("Error validating stock for product {} with quantity {}", productId, quantity, e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("available", false);
+            errorResponse.put("availableQuantity", 0);
+            errorResponse.put("message", "Error validating stock: " + e.getMessage());
+            return ResponseEntity.ok(errorResponse);
         }
     }
 

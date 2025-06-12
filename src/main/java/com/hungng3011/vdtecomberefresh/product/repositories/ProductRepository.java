@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -188,4 +189,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     @Query("SELECT MAX(p.basePrice) FROM Product p")
     BigDecimal getMaxProductPrice();
+    
+    // Methods needed for search indexing
+    
+    /**
+     * Find products updated after a specific timestamp for incremental indexing
+     */
+    @Query("SELECT p FROM Product p WHERE p.updatedAt > :timestamp")
+    List<Product> findByUpdatedAtAfter(@Param("timestamp") LocalDateTime timestamp);
+    
+    /**
+     * Find products by category ID for bulk operations
+     */
+    @Query("SELECT p FROM Product p WHERE p.category.id = :categoryId")
+    List<Product> findByCategoryId(@Param("categoryId") Long categoryId);
 }

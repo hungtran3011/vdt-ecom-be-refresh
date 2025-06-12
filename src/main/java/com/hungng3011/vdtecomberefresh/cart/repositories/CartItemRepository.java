@@ -3,8 +3,10 @@ package com.hungng3011.vdtecomberefresh.cart.repositories;
 import com.hungng3011.vdtecomberefresh.cart.entities.CartItem;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.List;
 
@@ -37,6 +39,14 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
      */
     @Query("SELECT COUNT(ci) FROM CartItem ci WHERE ci.cart.id = :cartId")
     long countByCartId(@Param("cartId") Long cartId);
+
+    /**
+     * Delete all cart items for a specific cart
+     * @param cartId Cart ID to delete items from
+     */
+    @Modifying
+    @Query("DELETE FROM CartItem ci WHERE ci.cart.id = :cartId")
+    void deleteByCartId(@Param("cartId") Long cartId);
 
     /**
      * Find cart items by user ID (through cart) with cursor-based pagination (forward)

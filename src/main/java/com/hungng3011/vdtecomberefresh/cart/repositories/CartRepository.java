@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.Optional;
 
 public interface CartRepository extends JpaRepository<Cart, Long> {
     
@@ -64,6 +66,42 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Query("SELECT COUNT(c) FROM Cart c WHERE c.userId = :userId")
     long countByUserId(@Param("userId") Long userId);
+
+    /**
+     * Find the most recent cart by user ID
+     * @param userId User ID to find cart for
+     * @return Optional Cart for the user
+     */
+    @Query("SELECT c FROM Cart c WHERE c.userId = :userId ORDER BY c.lastUpdated DESC")
+    List<Cart> findByUserIdOrderByLastUpdatedDesc(@Param("userId") Long userId);
+
+    /**
+     * Find active cart by user ID (most recent one)
+     * @param userId User ID to find cart for
+     * @return Optional Cart for the user
+     */
+    default Optional<Cart> findActiveCartByUserId(Long userId) {
+        List<Cart> carts = findByUserIdOrderByLastUpdatedDesc(userId);
+        return carts.isEmpty() ? Optional.empty() : Optional.of(carts.get(0));
+    }
+
+    /**
+     * Find carts by user email ordered by last updated descending
+     * @param userEmail User email to search for
+     * @return List of carts for the user ordered by most recent first
+     */
+    @Query("SELECT c FROM Cart c WHERE c.userEmail = :userEmail ORDER BY c.lastUpdated DESC")
+    List<Cart> findByUserEmailOrderByLastUpdatedDesc(@Param("userEmail") String userEmail);
+
+    /**
+     * Find the most recent cart for a user by user email
+     * @param userEmail User email to search for
+     * @return Optional Cart for the user
+     */
+    default Optional<Cart> findActiveCartByUserEmail(String userEmail) {
+        List<Cart> carts = findByUserEmailOrderByLastUpdatedDesc(userEmail);
+        return carts.isEmpty() ? Optional.empty() : Optional.of(carts.get(0));
+    }
 
     // Statistical queries for system stats
     @Query("SELECT COUNT(c) FROM Cart c WHERE c.lastUpdated >= :activeThreshold")

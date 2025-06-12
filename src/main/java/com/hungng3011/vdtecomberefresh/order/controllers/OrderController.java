@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/orders")
@@ -129,7 +130,47 @@ public class OrderController {
         }
     }
 
-    @PatchMapping("/{id}/cancel")
+    @PostMapping("/{id}/status")
+    public ResponseEntity<OrderDto> updateOrderStatus(
+            @PathVariable String id, 
+            @RequestBody Map<String, String> statusRequest,
+            @AuthenticationPrincipal Jwt jwt) {
+        log.info("Updating order status for order ID: {}", id);
+        
+        // Extract roles from JWT properly
+        List<String> roles = extractRoles(jwt);
+        log.debug("User {} has roles: {}", jwt.getClaimAsString("email"), roles);
+        if (roles == null || !roles.contains("admin")) {
+            log.warn("Unauthorized attempt to update order status by user: {} with roles: {}", 
+                    jwt.getClaimAsString("email"), roles);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        try {
+            String statusValue = statusRequest.get("status");
+            if (statusValue == null || statusValue.trim().isEmpty()) {
+                log.error("Status value is required for order status update");
+                return ResponseEntity.badRequest().build();
+            }
+            
+            OrderStatus newStatus;
+            try {
+                newStatus = OrderStatus.valueOf(statusValue.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid order status: {}", statusValue);
+                return ResponseEntity.badRequest().build();
+            }
+            
+            OrderDto updatedOrder = orderService.updateOrderStatus(id, newStatus);
+            log.info("Successfully updated order status for ID: {} to {}", id, newStatus);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (Exception e) {
+            log.error("Error updating order status for ID: {}", id, e);
+            throw e;
+        }
+    }
+
+    @PostMapping("/{id}/cancel")
     public ResponseEntity<OrderDto> cancelOrder(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
         String userEmail = jwt.getClaimAsString("email");
         log.info("Cancelling order with ID: {} for user: {}", id, userEmail);
@@ -219,6 +260,39 @@ public class OrderController {
         } catch (Exception e) {
             log.error("Error exporting orders for user: {}", userEmail, e);
             throw e;
+        }
+    }
+
+    /**
+     * Extract roles from JWT token properly handling Keycloak's nested structure
+     * @param jwt The JWT token
+     * @return List of role names (without ROLE_ prefix)
+     */
+    private List<String> extractRoles(Jwt jwt) {
+        try {
+            // Debug: Log all claims to understand JWT structure
+            log.debug("JWT Claims: {}", jwt.getClaims());
+            
+            Object realmAccess = jwt.getClaims().getOrDefault("realm_access", Map.of());
+            log.debug("Realm access: {}", realmAccess);
+            
+            if (realmAccess instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> realmAccessMap = (Map<String, Object>) realmAccess;
+                Object rolesObj = realmAccessMap.getOrDefault("roles", List.of());
+                log.debug("Roles object: {}", rolesObj);
+                
+                if (rolesObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<String> rolesList = (List<String>) rolesObj;
+                    log.debug("Extracted roles: {}", rolesList);
+                    return rolesList;
+                }
+            }
+            return List.of();
+        } catch (Exception e) {
+            log.error("Error extracting roles from JWT", e);
+            return List.of();
         }
     }
 }

@@ -15,6 +15,9 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     // For example, to find a profile by user ID:
      Optional<Profile> findProfileByUserId(UUID userId);
 
+    // Find profile by email
+    Optional<Profile> findProfileByEmail(String email);
+
     // Pagination methods
     @Query("SELECT p FROM Profile p WHERE p.id > :cursorId ORDER BY p.id ASC")
     List<Profile> findAllWithCursorAfter(@Param("cursorId") Long cursorId, Pageable pageable);

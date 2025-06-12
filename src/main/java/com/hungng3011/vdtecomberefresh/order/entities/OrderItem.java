@@ -5,6 +5,7 @@ import jakarta.persistence.*; // Import necessary annotations
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
@@ -25,6 +26,7 @@ public class OrderItem {
     @JoinColumn(name = "product_id") // Foreign key to Product
     private Product product; // Direct reference to Product instead of storing product details
 
+    @Positive
     private Integer quantity;
     @Column(precision = 19, scale = 4)
     private BigDecimal price; // Price at time of order (historical price)

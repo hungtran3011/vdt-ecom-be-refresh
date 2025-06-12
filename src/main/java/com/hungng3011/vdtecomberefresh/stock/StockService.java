@@ -330,7 +330,12 @@ public class StockService {
             log.info("Checking availability for product {} with variations {}", productId, variationIds);
             
             if (variationIds == null || variationIds.isEmpty()) {
-                return !getByProductId(productId).isEmpty();
+                log.info("Checking availability for simple product {} (no variations)", productId);
+                // For simple products, check if any stock is available (quantity > 0)
+                List<Stock> availableStocks = stockRepository.findAvailableVariationsByProductId(productId);
+                boolean available = !availableStocks.isEmpty();
+                log.info("Simple product availability: {} for product {}", available, productId);
+                return available;
             }
             
             List<Stock> availableStocks = stockRepository.findAvailableByProductIdAndVariationIds(
@@ -392,8 +397,19 @@ public class StockService {
             log.info("Validating stock for product {} with variations {} and quantity {}", 
                     productId, variationIds, requiredQuantity);
             
-            List<Stock> stocks = stockRepository.findAvailableByProductIdAndVariationIds(
-                productId, variationIds, variationIds.size());
+            List<Stock> stocks;
+            
+            // Handle simple products (no variations) vs products with variations
+            if (variationIds == null || variationIds.isEmpty()) {
+                log.info("Validating stock for simple product {} (no variations)", productId);
+                // For simple products, get all available stock for the product
+                stocks = stockRepository.findAvailableVariationsByProductId(productId);
+            } else {
+                log.info("Validating stock for product {} with specific variations {}", productId, variationIds);
+                // For products with variations, find stock matching the exact variation combination
+                stocks = stockRepository.findAvailableByProductIdAndVariationIds(
+                    productId, variationIds, variationIds.size());
+            }
             
             if (stocks.isEmpty()) {
                 log.warn("No stock found for product {} with variations {}", productId, variationIds);

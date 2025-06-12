@@ -10,6 +10,7 @@ import com.hungng3011.vdtecomberefresh.order.mappers.OrderMapper;
 import com.hungng3011.vdtecomberefresh.order.repositories.OrderRepository;
 import com.hungng3011.vdtecomberefresh.product.entities.Product;
 import com.hungng3011.vdtecomberefresh.product.repositories.ProductRepository;
+import com.hungng3011.vdtecomberefresh.stock.StockService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final NotificationService notificationService;
     private final ProductRepository productRepository;
+    private final StockService stockService;
 
     /**
      * Helper method to get customer email from order
@@ -51,7 +53,7 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
-        // Set Product entity references for each OrderItem
+        // Set Product entity references for each OrderItem and validate stock
         if (order.getItems() != null && orderDto.getItems() != null) {
             for (int i = 0; i < order.getItems().size(); i++) {
                 OrderItem item = order.getItems().get(i);
@@ -61,6 +63,18 @@ public class OrderService {
                     Product product = productRepository.findById(productId)
                         .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId));
                     item.setProduct(product);
+                    
+                    // Validate stock availability
+                    boolean stockAvailable = stockService.validateStockForVariationCombination(
+                        productId, new ArrayList<>(), item.getQuantity());
+                    
+                    if (!stockAvailable) {
+                        throw new IllegalStateException("Insufficient stock for product: " + product.getName() + 
+                            " (ID: " + productId + "). Requested quantity: " + item.getQuantity());
+                    }
+                    
+                    log.info("Stock validation passed for product {} with quantity {}", 
+                        product.getName(), item.getQuantity());
                 }
                 item.setOrder(order); // Set bidirectional relationship
             }
@@ -202,6 +216,103 @@ public class OrderService {
         return status == OrderStatus.PENDING_PAYMENT || 
                status == OrderStatus.PAID || 
                status == OrderStatus.CONFIRMED;
+    }
+
+    /**
+     * Update order status - primarily for admin use
+     * @param id The order ID
+     * @param newStatus The new order status
+     * @return The updated order DTO
+     */
+    @Transactional
+    public OrderDto updateOrderStatus(String id, OrderStatus newStatus) {
+        log.info("Updating order status for ID: {} to status: {}", id, newStatus);
+        
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + id));
+        
+        OrderStatus oldStatus = order.getStatus();
+        
+        // Validate status transition
+        if (!isValidStatusTransition(oldStatus, newStatus)) {
+            throw new IllegalStateException("Invalid status transition from " + oldStatus + " to " + newStatus);
+        }
+        
+        // Update order status
+        order.setStatus(newStatus);
+        order.setUpdatedAt(LocalDateTime.now());
+        
+        Order savedOrder = orderRepository.save(order);
+        
+        // Send status update email notifications
+        try {
+            String customerEmail = getCustomerEmail(order.getUserEmail());
+            if (customerEmail != null && !customerEmail.trim().isEmpty()) {
+                sendStatusUpdateNotification(order.getId(), customerEmail, newStatus);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send status update email for order: {}", id, e);
+            // Don't fail the status update if email fails
+        }
+        
+        log.info("Successfully updated order status from {} to {} for order: {}", oldStatus, newStatus, id);
+        return orderMapper.toDto(savedOrder);
+    }
+
+    /**
+     * Validate if status transition is allowed
+     * @param oldStatus Current status
+     * @param newStatus Desired new status
+     * @return true if transition is valid
+     */
+    private boolean isValidStatusTransition(OrderStatus oldStatus, OrderStatus newStatus) {
+        // Allow any status change for now - can be made more restrictive based on business rules
+        // Common business rules might be:
+        // - Cannot change from DELIVERED to other statuses
+        // - Cannot change from CANCELLED to other statuses except in special cases
+        // - PAYMENT_FAILED orders might only transition to CANCELLED
+        
+        if (oldStatus == newStatus) {
+            return true; // No change needed but allow
+        }
+        
+        // Don't allow changing from terminal states
+        if (oldStatus == OrderStatus.DELIVERED || oldStatus == OrderStatus.CANCELLED) {
+            log.warn("Attempted to change order from terminal status {} to {}", oldStatus, newStatus);
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Send appropriate notification based on new status
+     * @param orderId Order ID
+     * @param customerEmail Customer email
+     * @param newStatus New order status
+     */
+    private void sendStatusUpdateNotification(String orderId, String customerEmail, OrderStatus newStatus) {
+        try {
+            switch (newStatus) {
+                case SHIPPED:
+                    // For shipped status, we'd normally include tracking number
+                    // Using a placeholder for now
+                    notificationService.sendOrderShippedEmail(orderId, customerEmail, "TRACK" + orderId.substring(0, 8));
+                    break;
+                case DELIVERED:
+                    notificationService.sendOrderDeliveredEmail(orderId, customerEmail);
+                    break;
+                case CANCELLED:
+                    notificationService.sendOrderCancellationEmail(orderId, customerEmail);
+                    break;
+                default:
+                    // For other status changes, we could add generic status update email
+                    log.info("No specific email notification for status: {}", newStatus);
+                    break;
+            }
+        } catch (Exception e) {
+            log.error("Failed to send status update notification for order: {} status: {}", orderId, newStatus, e);
+        }
     }
 
     /**

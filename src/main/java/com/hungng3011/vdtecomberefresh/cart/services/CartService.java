@@ -9,12 +9,16 @@ import com.hungng3011.vdtecomberefresh.cart.repositories.CartRepository;
 import com.hungng3011.vdtecomberefresh.cart.repositories.CartItemRepository;
 import com.hungng3011.vdtecomberefresh.common.dtos.PagedResponse;
 import com.hungng3011.vdtecomberefresh.exception.cart.CartProcessingException;
+import com.hungng3011.vdtecomberefresh.product.dtos.VariationDto;
+import com.hungng3011.vdtecomberefresh.product.entities.Variation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -292,5 +296,285 @@ public class CartService {
                 .content(cartItemDtos)
                 .pagination(pagination)
                 .build();
+    }
+
+    // Email-based cart methods for Keycloak integration
+
+    /**
+     * Get cart by user email
+     * @param userEmail User email from JWT
+     * @return CartDto for the user
+     */
+    public CartDto getCartByEmail(String userEmail) {
+        log.info("Fetching cart for user email: {}", userEmail);
+        try {
+            return getOrCreateCartByEmail(userEmail);
+        } catch (Exception e) {
+            log.error("Error fetching cart for user email: {}", userEmail, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Get or create cart by user email
+     * @param userEmail User email from JWT
+     * @return CartDto for the user
+     */
+    public CartDto getOrCreateCartByEmail(String userEmail) {
+        log.info("Getting or creating cart for user email: {}", userEmail);
+        try {
+            // Try to find existing cart by email
+            var existingCart = cartRepository.findActiveCartByUserEmail(userEmail);
+            
+            if (existingCart.isPresent()) {
+                log.info("Found existing cart for user email: {}", userEmail);
+                return cartMapper.toDto(existingCart.get());
+            }
+            
+            // Create new cart if none exists
+            log.info("Creating new cart for user email: {}", userEmail);
+            CartDto cartDto = new CartDto();
+            cartDto.setUserEmail(userEmail);
+            return create(cartDto);
+        } catch (Exception e) {
+            log.error("Error getting or creating cart for user email: {}", userEmail, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Get cart items by user email with pagination
+     * @param userEmail User email from JWT
+     * @param page Page number
+     * @param size Page size  
+     * @param cursor Optional cursor for pagination
+     * @return PagedResponse containing cart items
+     */
+    public PagedResponse<CartItemDto> getCartItemsByEmailWithPagination(String userEmail, int page, int size, String cursor) {
+        log.info("Finding cart items for user email: {} with pagination - page: {}, size: {}, cursor: {}", 
+                userEmail, page, size, cursor);
+        try {
+            // Get cart for user
+            CartDto cart = getOrCreateCartByEmail(userEmail);
+            
+            Pageable pageable = PageRequest.of(page, size);
+            return getCartItemsWithPagination(cart.getId(), pageable, cursor);
+        } catch (Exception e) {
+            log.error("Error finding cart items for user email: {} with pagination", userEmail, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Add item to cart by user email
+     * @param userEmail User email from JWT
+     * @param cartItemDto Cart item to add
+     * @return Updated cart
+     */
+    public CartDto addItemToCartByEmail(String userEmail, CartItemDto cartItemDto) {
+        log.info("Adding item to cart for user email: {}", userEmail);
+        try {
+            // Get or create cart for user
+            CartDto cart = getOrCreateCartByEmail(userEmail);
+            
+            // Add item to cart (assuming there's an existing method)
+            return addItemToCart(cart.getId(), cartItemDto);
+        } catch (Exception e) {
+            log.error("Error adding item to cart for user email: {}", userEmail, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Update cart item by user email
+     * @param userEmail User email from JWT
+     * @param itemId Cart item ID
+     * @param cartItemDto Updated cart item
+     * @return Updated cart
+     */
+    public CartDto updateCartItemByEmail(String userEmail, Long itemId, CartItemDto cartItemDto) {
+        log.info("Updating cart item {} for user email: {}", itemId, userEmail);
+        try {
+            // Get cart for user
+            CartDto cart = getOrCreateCartByEmail(userEmail);
+            
+            // Update item in cart (assuming there's an existing method)
+            return updateCartItem(cart.getId(), itemId, cartItemDto);
+        } catch (Exception e) {
+            log.error("Error updating cart item {} for user email: {}", itemId, userEmail, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Remove item from cart by user email
+     * @param userEmail User email from JWT
+     * @param itemId Cart item ID
+     * @return Updated cart
+     */
+    public CartDto removeItemFromCartByEmail(String userEmail, Long itemId) {
+        log.info("Removing cart item {} for user email: {}", itemId, userEmail);
+        try {
+            // Get cart for user
+            CartDto cart = getOrCreateCartByEmail(userEmail);
+            
+            // Remove item from cart (assuming there's an existing method)
+            return removeItemFromCart(cart.getId(), itemId);
+        } catch (Exception e) {
+            log.error("Error removing cart item {} for user email: {}", itemId, userEmail, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Clear all items from cart by user email
+     * @param userEmail User email from JWT
+     * @return Empty cart
+     */
+    public CartDto clearCartByEmail(String userEmail) {
+        log.info("Clearing cart for user email: {}", userEmail);
+        try {
+            // Get cart for user
+            CartDto cart = getOrCreateCartByEmail(userEmail);
+            
+            // Clear all items from cart (assuming there's an existing method)
+            return clearCart(cart.getId());
+        } catch (Exception e) {
+            log.error("Error clearing cart for user email: {}", userEmail, e);
+            throw e;
+        }
+    }
+
+    // Helper methods (these would need to be implemented if they don't exist)
+    
+    private CartDto addItemToCart(Long cartId, CartItemDto cartItemDto) {
+        log.info("Adding item to cart {}: product {}, quantity {}", 
+                cartId, cartItemDto.getProductId(), cartItemDto.getQuantity());
+        
+        try {
+            // Get the cart
+            var cart = cartRepository.findById(cartId)
+                    .orElseThrow(() -> new CartProcessingException("Cart not found with ID: " + cartId));
+            
+            // Check if item already exists in cart (by product ID and selected variations)
+            var existingItem = cart.getItems().stream()
+                    .filter(item -> item.getProduct().getId().equals(cartItemDto.getProductId()) 
+                            && variationsMatch(item.getSelectedVariations(), cartItemDto.getSelectedVariations()))
+                    .findFirst();
+            
+            if (existingItem.isPresent()) {
+                // Update quantity if item exists
+                CartItem item = existingItem.get();
+                item.setQuantity(item.getQuantity() + cartItemDto.getQuantity());
+                cartItemRepository.save(item);
+                log.info("Updated existing cart item quantity to {}", item.getQuantity());
+            } else {
+                // Add new item to cart
+                CartItem newItem = cartItemMapper.toEntity(cartItemDto);
+                newItem.setCart(cart);
+                cartItemRepository.save(newItem);
+                cart.getItems().add(newItem);
+                log.info("Added new item to cart");
+            }
+            
+            cartRepository.save(cart);
+            return cartMapper.toDto(cart);
+        } catch (Exception e) {
+            log.error("Error adding item to cart {}", cartId, e);
+            throw new CartProcessingException("Failed to add item to cart", e);
+        }
+    }
+
+    private boolean variationsMatch(List<Variation> itemVariations, List<VariationDto> dtoVariations) {
+        if (itemVariations.size() != dtoVariations.size()) {
+            return false;
+        }
+        
+        Set<Long> itemVariationIds = itemVariations.stream()
+                .map(Variation::getId)
+                .collect(Collectors.toSet());
+        
+        Set<Long> dtoVariationIds = dtoVariations.stream()
+                .map(VariationDto::getId)
+                .collect(Collectors.toSet());
+        
+        return itemVariationIds.equals(dtoVariationIds);
+    }
+
+    private CartDto updateCartItem(Long cartId, Long itemId, CartItemDto cartItemDto) {
+        log.info("Updating cart item {} in cart {} with quantity {}", itemId, cartId, cartItemDto.getQuantity());
+        
+        try {
+            // Get the cart item
+            var cartItem = cartItemRepository.findById(itemId)
+                    .orElseThrow(() -> new CartProcessingException("Cart item not found with ID: " + itemId));
+            
+            // Verify the item belongs to the correct cart
+            if (!cartItem.getCart().getId().equals(cartId)) {
+                throw new CartProcessingException("Cart item " + itemId + " does not belong to cart " + cartId);
+            }
+            
+            // Update the item
+            cartItem.setQuantity(cartItemDto.getQuantity());
+            if (cartItemDto.getUnitPrice() != null) {
+                cartItem.setUnitPrice(cartItemDto.getUnitPrice());
+            }
+            
+            cartItemRepository.save(cartItem);
+            
+            // Return updated cart
+            return get(cartId);
+        } catch (Exception e) {
+            log.error("Error updating cart item {} in cart {}", itemId, cartId, e);
+            throw new CartProcessingException("Failed to update cart item", e);
+        }
+    }
+
+    private CartDto removeItemFromCart(Long cartId, Long itemId) {
+        log.info("Removing cart item {} from cart {}", itemId, cartId);
+        
+        try {
+            // Get the cart item
+            var cartItem = cartItemRepository.findById(itemId)
+                    .orElseThrow(() -> new CartProcessingException("Cart item not found with ID: " + itemId));
+            
+            // Verify the item belongs to the correct cart
+            if (!cartItem.getCart().getId().equals(cartId)) {
+                throw new CartProcessingException("Cart item " + itemId + " does not belong to cart " + cartId);
+            }
+            
+            // Remove the item from cart
+            var cart = cartItem.getCart();
+            cart.getItems().remove(cartItem);
+            cartItemRepository.delete(cartItem);
+            cartRepository.save(cart);
+            
+            log.info("Successfully removed cart item {} from cart {}", itemId, cartId);
+            return cartMapper.toDto(cart);
+        } catch (Exception e) {
+            log.error("Error removing cart item {} from cart {}", itemId, cartId, e);
+            throw new CartProcessingException("Failed to remove cart item", e);
+        }
+    }
+
+    private CartDto clearCart(Long cartId) {
+        log.info("Clearing all items from cart {}", cartId);
+        
+        try {
+            // Get the cart
+            var cart = cartRepository.findById(cartId)
+                    .orElseThrow(() -> new CartProcessingException("Cart not found with ID: " + cartId));
+            
+            // Remove all items
+            cart.getItems().clear();
+            cartItemRepository.deleteByCartId(cartId);
+            cartRepository.save(cart);
+            
+            log.info("Successfully cleared all items from cart {}", cartId);
+            return cartMapper.toDto(cart);
+        } catch (Exception e) {
+            log.error("Error clearing cart {}", cartId, e);
+            throw new CartProcessingException("Failed to clear cart", e);
+        }
     }
 }
