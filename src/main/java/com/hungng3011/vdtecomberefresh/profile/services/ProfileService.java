@@ -46,21 +46,21 @@ public class ProfileService {
     }
 
     public ProfileDto getProfileByEmail(String email) {
-     if (email == null || email.isBlank()) {
-         throw new IllegalArgumentException("Email must be provided");
-     }
-     String normalised = email.trim().toLowerCase();
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email must be provided");
+        }
+        String normalizedEmail = email.trim().toLowerCase();
         try {
-            log.info("Retrieving profile for email: {}", email);
-            Profile profile = repository.findProfileByEmail(email)
-                    .orElseThrow(() -> new EntityNotFoundException("Profile not found for email: " + email));
-            log.info("Successfully retrieved profile for email: {}", email);
+            log.info("Retrieving profile for email: {}", normalizedEmail);
+            Profile profile = repository.findProfileByEmail(normalizedEmail)
+                    .orElseThrow(() -> new EntityNotFoundException("Profile not found for email: " + normalizedEmail));
+            log.info("Successfully retrieved profile for email: {}", normalizedEmail);
             return mapper.toDto(profile);
         } catch (EntityNotFoundException e) {
-            log.warn("Profile not found for email: {}", email);
+            log.warn("Profile not found for email: {}", normalizedEmail);
             throw e;
         } catch (Exception e) {
-            log.error("Error retrieving profile for email: {}", email, e);
+            log.error("Error retrieving profile for email: {}", normalizedEmail, e);
             throw e;
         }
     }
@@ -91,7 +91,7 @@ public class ProfileService {
             Profile saved = repository.save(entityToSave);
             log.info("Successfully {} profile for user id: {}", 
                     profile.getId() != null ? "updated" : "created", dto.getUserId());
-            return mapper.updateEntityFromDto(saved);
+            return mapper.toDto(saved);
         } catch (Exception e) {
             log.error("Error creating or updating profile for user id: {}", dto.getUserId(), e);
             throw e;
